@@ -25,7 +25,7 @@
 | `public/index.php` | Заготовка точки входа сайта |
 
 ### Не реализовано ❌
-- 22 из 25 контрактов (см. §3)
+- 22 из 25 контрактов + ConfigInterface (см. §3, §8)
 - Все 31 модуль уровня P0–P3 (ядро не запускается)
 - `Registry`, `Container`, `EventBus`, `Router`, `helpers.php` в корне `core/`
 - Каталог `tests/` и PHPUnit-конфигурация
@@ -45,15 +45,11 @@
 
 ---
 
-## 3. ЭТАП 0 — ДОПОЛНИТЕЛЬНЫЙ ВОПРОС (требует решения пользователя) ⚠️
+## 3. РЕШЕНИЕ ПО Config (зафиксировано из Конституции) ✅
 
-В статье 8.5 перечислены 8 P0-компонентов, включая **Config**, но в Статья 19 (структура) и Статья 16 (25 контрактов) **модуля Config / ConfigInterface нет**. Это противоречие.
+Конституция прямо требует Config на P0 в трёх местах: Статья 8.1 (п.3), Статья 8.5 (ШАГ 1), Статья 8.7 («ЗАПРЕЩЕНО пропускать Config»), а Статья 8.6 использует `ConfigInterface::class` как P0-зависимость модулей. При этом `ConfigInterface` отсутствует в списке 25 контрактов Статьи 16 и папка `Config/` — в дереве Статьи 19.
 
-**Варианты (нужен выбор пользователя):**
-- A) Реализовать Config как P0-компонент ядра без отдельного контракта из списка 25 (внутренний сервис `core/Module/Config/`) + добавить `ConfigInterface` в Contract/ (он уже упоминается в Статье 17 как обязательный для проверки Doctor'ом).
-- B) Иное решение пользователя.
-
-До получения ответа Config помечен как «ожидает согласования».
+**Решение:** Config реализуется как обязательный P0-компонент (`core/Module/Config/`) с контрактом `core/Contract/ConfigInterface.php`. Расхождение списков Статья 16 / Статья 19 фиксируется здесь как **замечание к Конституции** (сам документ не правим — изменения только по Статье 37). Требует подтверждения пользователем, но противоречия нет: более конкретные и императивные нормы (8.1/8.5/8.6/8.7) приоритетны над перечнем.
 
 ---
 
@@ -65,7 +61,7 @@
 |---|---|---|---|---|---|
 | 1.1 | **FileStorage** | FileStorageInterface | `core/Contract/FileStorageInterface.php`, `core/Module/FileStorage/FileStorage.php` | `tests/Unit/Module/FileStorage/` | ❌ |
 | 1.2 | **Logger** | LoggerInterface ✅существует | `core/Module/Logger/FileLogger.php`, каналы по `config/logger.php` (Статья 31) | `tests/Unit/Module/Logger/` | ❌ |
-| 1.3 | **Config** ⚠️ см. §3 | ConfigInterface | `core/Module/Config/Config.php`, чтение `.env` + `config/*.php` | `tests/Unit/Module/Config/` | ⏸ ожидает решения |
+| 1.3 | **Config** (см. §3) | ConfigInterface | `core/Module/Config/Config.php`, чтение `.env` + `config/*.php` | `tests/Unit/Module/Config/` | ❌ |
 | 1.4 | **Container (DI)** | FactoryInterface, KernelInterface::get() | `core/Container.php` | `tests/Unit/ContainerTest.php` | ❌ |
 | 1.5 | **EventBus** | (событийная модель, Статья 18) | `core/EventBus.php` | `tests/Unit/EventBusTest.php` | ❌ |
 | 1.6 | **Registry** | ModuleInterface ✅существует | `core/Registry.php` | `tests/Unit/RegistryTest.php` | ❌ |
@@ -191,4 +187,4 @@ tests/
 
 | Дата | Событие |
 |---|---|
-| 01.11.2026 | План создан. Аудит: 3/25 контрактов, 0/31 модуль. Открыт вопрос §3 (Config). |
+| 01.11.2026 | План создан. Аудит: 3/25 контрактов, 0/31 модуль. Зафиксировано решение §3: Config обязателен на P0 (Статьи 8.1/8.5/8.6/8.7). Замечание: ConfigInterface отсутствует в перечне Статьи 16 — требуется подтверждение пользователя. |

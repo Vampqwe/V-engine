@@ -1,0 +1,70 @@
+{
+    "name": "v-engine/kernel",
+    "description": "Микроядерный движок как операционная система для сайтов. Конституционный подход к архитектуре.",
+    "type": "project",
+    "license": "proprietary",
+    "keywords": [
+        "microkernel",
+        "engine",
+        "framework",
+        "constitution",
+        "php8"
+    ],
+    "authors": [
+        {
+            "name": "V-Engine Architect",
+            "role": "Lead Developer"
+        }
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "ext-mbstring": "*",
+        "ext-tokenizer": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Core\\": "core/",
+            "Law\\": "law/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/lex"
+    ],
+    "scripts": {
+        "lex": "php bin/lex",
+        "check": "@lex",
+        "test": "phpunit",
+        "post-install-cmd": [
+            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ]
+    },
+    "scripts-descriptions": {
+        "lex": "Запуск Конституционного Суда (Lex) для проверки кода на соответствие Конституции",
+        "check": "Алиас для lex",
+        "test": "Запуск тестов PHPUnit"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "platform": {
+            "php": "8.1"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0-dev"
+        }
+    }
+}

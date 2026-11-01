@@ -48,8 +48,10 @@ final class DataValidator implements ValidatorInterface
             // «Пустое» значение: null, '' или строка из пробелов.
             $blank = $value === null || (is_string($value) && trim($value) === '');
 
+            // ВАЖНО: правила с null-аргументом ('required' => null) требуют array_key_exists,
+            // isset() на них возвращает false (значение null). Ошибка была найдена тестом.
             if (!$present) {
-                if (isset($parsed['required'])) {
+                if (array_key_exists('required', $parsed)) {
                     $errors[$field][] = 'The field is required.';
                 }
                 continue; // нет значения — остальные правила не проверяем
@@ -57,7 +59,7 @@ final class DataValidator implements ValidatorInterface
             if ($blank && !in_array('nullable', $flags, true)) {
                 // Присутствует, но пусто — required нарушен даже без явного флага:
                 // пустое значение не может пройти какую-либо содержательную проверку.
-                $errors[$field][] = isset($parsed['required'])
+                $errors[$field][] = array_key_exists('required', $parsed)
                     ? 'The field is required.'
                     : 'The field must not be empty.';
                 continue;

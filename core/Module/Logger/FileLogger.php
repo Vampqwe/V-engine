@@ -34,7 +34,9 @@ final class FileLogger implements LoggerInterface
 
     public function channel(string $name): LoggerInterface
     {
-        $name = trim($name);
+        // Санитизация ИМЕНИ КАНАЛА на входе: «../../evil» => «..__evil».
+        // Плохое имя не должно жить ни в пути файла, ни в записи лога.
+        $name = preg_replace('/[^A-Za-z0-9_.-]/', '_', trim($name)) ?? '';
         return new self($this->storage, $name === '' ? self::DEFAULT_CHANNEL : $name, $this->logDir);
     }
 

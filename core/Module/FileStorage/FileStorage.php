@@ -120,7 +120,6 @@ final class FileStorage implements FileStorageInterface
         }
         // Шаблон всегда собирается внутри root (jail). Спецсимволы абсолютной
         // части паттерна не допускаем: относительный шаблон режем от root.
-        $base = $this->rootDir;
         if ($pattern[0] === '/') {
             $normalized = $this->normalize($pattern);
             if (!$this->isInsideRoot($normalized)) {
@@ -128,8 +127,73 @@ final class FileStorage implements FileStorageInterface
             }
             $pattern = ltrim(substr($normalized, strlen($this->rootDir)), '/');
         }
-        $files = glob($base . '/' . $pattern, GLOB_BRACE | GLOB_NOSORT);
-        return $files === false ? [] : $files;
+
+        // glob() здесь ненадёжен: его реализация glibc раскрывает «..» в шаблоне
+        // (ловушка 'logs/../../etc/*' показывает файлы ВНЕ jail) и при этом
+        // глоб не находит файлы, чьи имена начинаются с «..». Поэтому —
+        // собственный сканер: сегменты шаблона сопоставляются построчно,
+        // список строится от корня jail, наружу не выходим никогда.
+        [$dirPattern, $namePattern] = self::splitPattern($pattern);
+        $base = $this->rootDir . ($dirPattern === '' ? '' : '/' . $dirPattern);
+        // Директория из шаблона не должна содержать magic-сегментов наружу.
+        foreach (explode('/', $dirPattern) as $segment) {
+            if ($segment === '..') {
+                throw new FileStorageException(sprintf('Pattern "%s" escapes storage root.', $pattern));
+            }
+        }
+        if (!is_dir($base)) {
+            return [];
+        }
+
+        $results = [];
+        $this->scanDir($base, $namePattern, $results);
+        sort($results);
+        return $results;
+    }
+
+    /** Разделить шаблон на директорию и имя файла. */
+    private static function splitPattern(string $pattern): array
+    {
+        $pos = strrpos($pattern, '/');
+        return $pos === false
+            ? ['', $pattern]
+            : [substr($pattern, 0, $pos), substr($pattern, $pos + 1)];
+    }
+
+    /** Рекурсивный обход одной директории (не глубже уровня шаблона). */
+    private function scanDir(string $dir, string $namePattern, array &$results): void
+    {
+        $entries = scandir($dir);
+        if ($entries === false) {
+            return;
+        }
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+            if (!self::fnmatchSafe($namePattern, $entry)) {
+                continue;
+            }
+            $full = $dir . '/' . $entry;
+            if (is_link($full)) {
+                // Симлинги в выдачу не отдаём: их цель вне контроля jail-пути.
+                continue;
+            }
+            if (!is_file($full)) {
+                continue;
+            }
+            $results[] = $full;
+        }
+    }
+
+    /**
+     * fnmatch без флага GLOB_PATH_SEPARATORS: '*' не должен поглощать '/',
+     * но шаблоны у нас уже разрезаны на «директория + имя», поэтому для имени
+     * обычный fnmatch безопасен. Пустое имя (шаблон 'logs/') ничего не матчит.
+     */
+    private static function fnmatchSafe(string $pattern, string $subject): bool
+    {
+        return $pattern !== '' && fnmatch($pattern, $subject);
     }
 
     // =========================================================================

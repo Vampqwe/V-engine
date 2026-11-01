@@ -49,3 +49,6 @@
 {"ts":"2026-11-01T10:57:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
 {"ts":"2026-11-01T10:57:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
 {"ts":"2026-11-01T10:57:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:57:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:57:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:57:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}

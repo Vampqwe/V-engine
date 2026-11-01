@@ -388,8 +388,9 @@ final class Kernel implements KernelInterface
             return Response::json(['error' => 'not_found', 'path' => $request->getPath()], 404);
         }
         $path = htmlspecialchars($request->getPath(), ENT_QUOTES, 'UTF-8');
-        // Диагностика: какие сайты есть в движке (помогает найти причину 404 —
-        // например, папка sites/<домен> отсутствует или названа иначе).
+        // Диагностика: какие сайты есть в движке и что зарегистрировано в
+        // роутере (помогает найти причину 404 — например, папка sites/<домен>
+        // отсутствует или названа иначе, либо модуль панели не поднялся).
         $sitesHint = '';
         try {
             /** @var SiteContextInterface $ctx */
@@ -405,6 +406,23 @@ final class Kernel implements KernelInterface
         } catch (\Throwable) {
             // диагностика не должна ронять страницу ошибки
         }
+        // Список маршрутов ядра (только GET /... без параметров) — если среди
+        // них нет «GET /admin», значит панель не зарегистрировалась (boot).
+        $routesHint = '';
+        try {
+            $patterns = $this->router->listPatterns();
+            $plain = array_values(array_filter(
+                $patterns,
+                static fn (string $p): bool => str_starts_with($p, 'GET ') && !str_contains($p, '{'),
+            ));
+            if ($plain !== []) {
+                $routesHint = '<p style="color:#8b949e;font-size:.8rem;margin-top:.75rem;max-width:640px">Маршруты ядра: <code>'
+                    . htmlspecialchars(implode(' · ', array_slice($plain, 0, 24)), ENT_QUOTES, 'UTF-8')
+                    . (count($plain) > 24 ? ' …' : '') . '</code></p>';
+            }
+        } catch (\Throwable) {
+            // диагностика не должна ронять страницу ошибки
+        }
         $html = '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<title>404 · LEX Engine</title><style>body{background:#0d1117;color:#e6edf3;'
@@ -415,6 +433,7 @@ final class Kernel implements KernelInterface
             . 'border-radius:6px;color:#79c0ff}a{color:#1f6feb;text-decoration:none}</style></head><body>'
             . '<div class="box"><h1>404</h1><p>Запрашиваемый ресурс <code>' . $path . '</code> не найден.</p>'
             . '<p style="color:#8b949e">Он мог быть перемещён, удалён, или URL неверен.</p>'
+            . $sitesHint . $routesHint
             . '<p><a href="/">← На главную</a> &nbsp;·&nbsp; <a href="/admin/">Админ-панель</a></p>'
             . '</div></body></html>';
         return Response::html($html, 404);

@@ -1,9 +1,2 @@
-.env
-.env.local
-*.env.*
-storage/logs/
-storage/cache/
-storage/sessions/
-storage/uploads/
-.DS_Store
-Thumbs.db
+*.log
+.phpunit.cache/

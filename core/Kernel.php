@@ -366,7 +366,7 @@ final class Kernel implements KernelInterface
             }
             $value = $result->params[$name];
             $type = $param->getType();
-            if ($type instanceof ReflectionNamedType && !isset(self::PARAM_CASTS[$type->getName()])) {
+            if ($type instanceof \ReflectionNamedType && !isset(self::PARAM_CASTS[$type->getName()])) {
                 // Не «нативные» типы не кастим silently — параметризованные closure
                 // вне нативных типов ловятся здесь же понятной ошибкой.
                 throw new EngineException(sprintf(
@@ -376,11 +376,14 @@ final class Kernel implements KernelInterface
                     $result->pattern,
                 ));
             }
-            $args[] = $type instanceof ReflectionNamedType
+            $args[] = $type instanceof \ReflectionNamedType
                 ? self::castParam($value, $type->getName())
                 : $value;
         }
-        return $handler(...$args) instanceof object ? $handler(...$args) : $this->wrapScalar($handler(...$args));
+        // Вызываем хендлер ОДИН раз (§18: никаких повторных side-effect-вызовов);
+        // объект (Response) пропускаем как есть, скаляр — оборачиваем.
+        $returned = $handler(...$args);
+        return is_object($returned) ? $returned : $this->wrapScalar($returned);
     }
 
     /** Нативно поддерживаемые типы параметров маршрута (скалярная коэрция строк regex). */

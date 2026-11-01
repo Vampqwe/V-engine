@@ -1,0 +1,155 @@
+<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title><?= $esc($title ?? 'Админ · LEX Engine') ?></title>
+<style>
+/* ==========================================================================
+   LEX Admin — тёмная тема в стиле github.com (Primer Dark)
+   ========================================================================== */
+:root {
+  --bg-canvas: #0d1117;
+  --bg-default: #161b22;
+  --bg-inset: #010409;
+  --bg-overlay: #21262d;
+  --border-default: #30363d;
+  --border-muted: #21262d;
+  --fg-default: #e6edf3;
+  --fg-muted: #848d97;
+  --accent: #1f6feb;
+  --accent-fg: #ffffff;
+  --success: #3fb950;
+  --success-emph: #238636;
+  --attention: #d29922;
+  --danger: #f85149;
+  --danger-emph: #da3633;
+  --done: #a371f7;
+  --neutral-muted: rgba(110,118,129,.4);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg-canvas);
+  color: var(--fg-default);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+}
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code, .mono { font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+
+/* --- Верхняя навигационная полоса (меню админки) ------------------------- */
+.header {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--bg-default);
+  border-bottom: 1px solid var(--border-default);
+  padding: 0 16px;
+}
+.header-inner { max-width: 1220px; margin: 0 auto; display: flex; align-items: center; gap: 4px; height: 56px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-right: 12px; color: var(--fg-default); }
+.brand:hover { text-decoration: none; }
+.brand svg { fill: var(--fg-default); }
+.brand .ver { color: var(--fg-muted); font-weight: 400; font-size: 12px; border: 1px solid var(--border-default); border-radius: 2em; padding: 1px 8px; }
+.nav { display: flex; gap: 2px; flex: 1; flex-wrap: wrap; }
+.nav a {
+  color: var(--fg-default); padding: 6px 12px; border-radius: 6px; font-weight: 500;
+  border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+}
+.nav a:hover { background: var(--bg-overlay); text-decoration: none; }
+.nav a.active { background: var(--bg-canvas); box-shadow: inset 2px 0 0 var(--accent), inset -2px 0 0 var(--accent), inset 0 2px 0 var(--accent); border-radius: 6px 6px 0 0; }
+.hstatus { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--fg-muted); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.dot.ok { background: var(--success); } .dot.warn { background: var(--attention); }
+.dot.fail { background: var(--danger); } .dot.muted { background: var(--fg-muted); }
+
+/* --- Контент -------------------------------------------------------------- */
+.container { max-width: 1220px; margin: 0 auto; padding: 24px 16px 64px; }
+.page-title { font-size: 24px; font-weight: 600; margin: 0 0 4px; }
+.page-sub { color: var(--fg-muted); margin: 0 0 20px; font-size: 14px; }
+.grid { display: grid; gap: 16px; }
+.grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); }
+.card {
+  background: var(--bg-default); border: 1px solid var(--border-default);
+  border-radius: 6px; overflow: hidden;
+}
+.card-h {
+  padding: 12px 16px; border-bottom: 1px solid var(--border-default);
+  font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+}
+.card-h .hint { font-weight: 400; color: var(--fg-muted); font-size: 12px; }
+.card-b { padding: 16px; }
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat .num { font-size: 28px; font-weight: 600; line-height: 1.2; }
+.stat .lbl { color: var(--fg-muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+.stat .sub { color: var(--fg-muted); font-size: 12px; }
+
+table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data th {
+  text-align: left; padding: 8px 16px; color: var(--fg-muted); font-weight: 500;
+  border-bottom: 1px solid var(--border-default); background: var(--bg-default); white-space: nowrap;
+}
+table.data td { padding: 8px 16px; border-bottom: 1px solid var(--border-muted); vertical-align: top; }
+table.data tr:last-child td { border-bottom: none; }
+table.data tr:hover td { background: rgba(177,186,196,.04); }
+
+.badge { display: inline-block; padding: 1px 9px; border-radius: 2em; font-size: 12px; font-weight: 500; border: 1px solid var(--border-default); }
+.badge.ok   { color: var(--success); background: rgba(46,160,67,.15); border-color: rgba(46,160,67,.4); }
+.badge.warn { color: var(--attention); background: rgba(187,128,9,.15); border-color: rgba(187,128,9,.4); }
+.badge.fail { color: var(--danger); background: rgba(248,81,73,.15); border-color: rgba(248,81,73,.4); }
+.badge.info { color: var(--accent); background: rgba(56,139,253,.15); border-color: rgba(56,139,253,.4); }
+.badge.done { color: var(--done); background: rgba(163,113,247,.15); border-color: rgba(163,113,247,.4); }
+.badge.muted { color: var(--fg-muted); }
+
+.bar { height: 8px; background: var(--bg-inset); border: 1px solid var(--border-muted); border-radius: 6px; overflow: hidden; min-width: 80px; }
+.bar > span { display: block; height: 100%; background: var(--accent); }
+.bar > span.warn { background: var(--attention); } .bar > span.fail { background: var(--danger); } .bar > span.ok { background: var(--success); }
+
+.btn {
+  display: inline-block; background: var(--bg-overlay); color: var(--fg-default);
+  border: 1px solid var(--border-default); border-radius: 6px; padding: 5px 16px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+}
+.btn:hover { background: #30363d; text-decoration: none; }
+.btn.danger { background: rgba(248,81,73,.1); color: var(--danger); border-color: rgba(248,81,73,.4); }
+.btn.success { background: var(--success-emph); color: var(--accent-fg); border-color: rgba(240,246,252,.1); }
+form.inline { display: inline; }
+
+.flash {
+  background: rgba(56,139,253,.15); border: 1px solid rgba(56,139,253,.4);
+  border-radius: 6px; padding: 10px 16px; margin-bottom: 16px; color: var(--fg-default);
+}
+.kv { display: grid; grid-template-columns: minmax(140px, 30%) 1fr; gap: 4px 12px; font-size: 13px; }
+.kv dt { color: var(--fg-muted); } .kv dd { margin: 0; word-break: break-word; }
+.footer { color: var(--fg-muted); font-size: 12px; text-align: center; padding: 24px 0; border-top: 1px solid var(--border-muted); margin-top: 32px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.empty { color: var(--fg-muted); padding: 16px; text-align: center; }
+@media (max-width: 640px) { .nav a { padding: 4px 8px; font-size: 13px; } .hstatus { display: none; } }
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-inner">
+    <a class="brand" href="/admin/">
+      <svg height="22" viewBox="0 0 16 16" width="22"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-4.02 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.52 1.07-.46.21-1.63.56-2.33.67-.75.13-1.51-.59-1.51-.59-.43-.6-.85-1.18-.85-1.18-.7-.48.05-.47.05-.47.77.05 1.18.8 1.18.8.68 1.17 2 1 .71.27 1.36.42 1.85.52-1.61.45-3.28 1.24-3.28 4.2 0 .93.34 1.7.9 2.3-.09.22-.4 1.12.09 2.33 0 0 .75-.24 2.45-.92a8.5 8.5 0 0 1 4.46 0c1.7.68 2.45.92 2.45.92.49-1.21.18-2.11.09-2.33.56-.6.9-1.37.9-2.3 0-2.93-1.67-3.71-3.28-4.16z"></path></svg>
+      LEX&nbsp;Admin <span class="ver">v<?= $esc($stats['engine']['version'] ?? '?') ?></span>
+    </a>
+    <nav class="nav">
+      <a href="/admin/" class="<?= $esc(($page ?? '') === 'dashboard' ? 'active' : '') ?>">Обзор</a>
+      <a href="/admin/modules" class="<?= $esc(($page ?? '') === 'modules' ? 'active' : '') ?>">Модули</a>
+      <a href="/admin/health" class="<?= $esc(($page ?? '') === 'health' ? 'active' : '') ?>">Здоровье</a>
+      <a href="/admin/routes" class="<?= $esc(($page ?? '') === 'routes' ? 'active' : '') ?>">Маршруты</a>
+      <a href="/admin/storage" class="<?= $esc(($page ?? '') === 'storage' ? 'active' : '') ?>">Хранилище</a>
+      <a href="/admin/php" class="<?= $esc(($page ?? '') === 'php' ? 'active' : '') ?>">PHP</a>
+    </nav>
+    <?php $hs = \lex_adm_health_class((string) ($stats['health']['status'] ?? '')); ?>
+    <div class="hstatus">
+      <span><span class="dot <?= $esc($hs) ?>"></span> <?= $esc(strtoupper((string) ($stats['health']['status'] ?? 'n/a'))) ?></span>
+      <span class="mono"><?= $esc($stats['site']['domain'] ?? '') ?></span>
+    </div>
+  </div>
+</header>
+<main class="container">
+<?php if (!empty($flash)): ?><div class="flash"><?= $esc($flash) ?></div><?php endif; ?>

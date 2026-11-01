@@ -113,7 +113,7 @@ final class FileStorageTest extends TestCase
      */
     public function testWindowsStyleMixedSeparatorsAreCanonicalized(): void
     {
-        $canon = new ReflectionMethod(FileStorage::class, 'canonicalize');
+        $canon = new \ReflectionMethod(FileStorage::class, 'canonicalize');
         self::assertSame(
             'H:/Server/OSPanel/home/V-engine/sites/v-engine/storage/logs',
             $canon->invoke(null, 'H:\\Server\\OSPanel\\home\\V-engine\\sites\\v-engine\\storage/logs'),
@@ -125,7 +125,7 @@ final class FileStorageTest extends TestCase
     public function testResolveNonExistingWritePathStaysInJail(): void
     {
         // Сценарий boot SessionManager: директория sessions ещё не существует.
-        $resolve = new ReflectionMethod($this->fs, 'resolve');
+        $resolve = new \ReflectionMethod($this->fs, 'resolve');
         $resolved = $resolve->invoke($this->fs, 'sessions/file.dat', true);
         self::assertStringStartsWith($this->fs->getRootDir(), $resolved);
     }

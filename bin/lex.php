@@ -49,6 +49,9 @@ try {
         else $warnCount++;
 
         $relPath = str_replace(ENGINE_BASE_PATH . DIRECTORY_SEPARATOR, '', $v->filePath);
+        // Нормализация разделителей для Windows (H:\... и H:/...) — консистентный вывод CLI
+        $engineBaseNorm = rtrim(str_replace('\\', '/', ENGINE_BASE_PATH), '/');
+        $relPath = str_replace($engineBaseNorm . '/', '', rtrim(str_replace('\\', '/', $v->filePath), '/'));
         
         echo sprintf(
             "\033[%sm[%s] %s (Строка: %d)\033[0m\n",

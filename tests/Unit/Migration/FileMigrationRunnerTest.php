@@ -17,6 +17,9 @@ final class FileMigrationRunnerTest extends TestCase
 
     protected function setUp(): void
     {
+        if (!extension_loaded('pdo_sqlite')) {
+            $this->markTestSkipped('Требуется расширение pdo_sqlite для тестов миграций.');
+        }
         $pdo = new \PDO('sqlite::memory:', options: [
             \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
             \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,

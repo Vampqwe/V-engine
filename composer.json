@@ -23,10 +23,14 @@
         "ext-pdo": "*",
         "ext-json": "*",
         "ext-mbstring": "*",
-        "ext-tokenizer": "*"
+        "ext-tokenizer": "*",
+        "ext-pdo_sqlite": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^10.0"
+    },
+    "suggest": {
+        "ext-pdo_sqlite": "Нужен для тестов PdoDatabase/FileMigrationRunner (в продакшене можно заменить на ext-pdo_mysql / ext-pdo_pgsql)."
     },
     "autoload": {
         "psr-4": {

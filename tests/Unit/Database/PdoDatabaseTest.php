@@ -9,6 +9,13 @@ use PHPUnit\Framework\TestCase;
 
 final class PdoDatabaseTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        if (!extension_loaded('pdo_sqlite')) {
+            $this->markTestSkipped('Требуется расширение pdo_sqlite для тестов PdoDatabase.');
+        }
+    }
+
     private function sqlite(): \PDO
     {
         $pdo = new \PDO('sqlite::memory:', options: [

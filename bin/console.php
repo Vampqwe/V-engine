@@ -78,6 +78,19 @@ try {
     $env = $engineEnv;
     if ($site !== null && $site !== '') {
         $env['SITE_DOMAIN'] = $site;
+    } elseif (!isset($env['SITE_URL']) || $env['SITE_URL'] === '') {
+        // Дефолт CLI: первый сайт в алфавитном порядке из sites/ (иначе boot упадёт
+        // с «Cannot determine site», т.к. HTTP_HOST в CLI недоступен).
+        if (($env['SITE_DOMAIN'] ?? '') === '') {
+            $candidates = array_values(array_filter(
+                scandir(ENGINE_BASE_PATH . '/sites') ?: [],
+                static fn (string $d): bool => $d[0] !== '.' && is_dir(ENGINE_BASE_PATH . '/sites/' . $d),
+            ));
+            if ($candidates !== []) {
+                $env['SITE_DOMAIN'] = $candidates[0];
+                fwrite(STDERR, "[console] --site не указан, используется сайт по умолчанию: {$candidates[0]}\n");
+            }
+        }
     }
     $kernel = new Kernel(ENGINE_BASE_PATH, null, [], $env);
     $kernel->boot();
@@ -280,9 +293,12 @@ Commands:
   queue:status    Show pending/failed job counts
   scheduler:run   Fire all jobs due at this minute (cron-safe, idempotent)
   doctor          Site self-diagnostics (HealthCheck aggregation, exit 1 on fail)
+  migrate         Run pending migrations (--site=<domain>)
+  migrate:status  List applied/pending migrations
+  migrate:rollback Rollback last batch (--steps=N)
 
 Options:
-  --site=<domain> Site folder binding: sites/<domain> (default: cli.lex.local)
+  --site=<domain> Site folder binding: sites/<domain> (default: first folder in sites/)
   --help          Show this help
 
 Examples:

@@ -11,19 +11,19 @@ $mods   = $stats['modules'] ?? [];
 <div class="grid cols-4" style="margin-bottom:16px">
   <div class="card"><div class="card-b stat">
     <span class="lbl">Здоровье</span>
-    <span class="num" style="color:var(--<?= $hs = $hClass === 'ok' ? 'success' : ($hClass === 'fail' ? 'danger' : 'attention'); ?>)">
+    <span class="num" style="color:var(--<?= $esc(lex_adm_css_var($hClass)) ?>)">
       <?= $esc(lex_adm_icon($hClass)) ?> <?= $esc(strtoupper((string) ($stats['health']['status'] ?? 'n/a'))) ?>
     </span>
-    <span class="sub">ok <?= (int) ($stats['health']['summary']['ok'] ?? 0) ?> · warn <?= (int) ($stats['health']['summary']['warning'] ?? 0) ?> · fail <?= (int) ($stats['health']['summary']['fail'] ?? 0) ?></span>
+    <span class="sub">ok <?= $esc(lex_adm_int($stats['health']['summary']['ok'] ?? 0)) ?> · warn <?= $esc(lex_adm_int($stats['health']['summary']['warning'] ?? 0)) ?> · fail <?= $esc(lex_adm_int($stats['health']['summary']['fail'] ?? 0)) ?></span>
   </div></div>
   <div class="card"><div class="card-b stat">
     <span class="lbl">Модули</span>
-    <span class="num"><?= count($mods) ?></span>
+    <span class="num"><?= $esc(lex_adm_int(count($mods))) ?></span>
     <span class="sub">подключено к реестру ядра</span>
   </div></div>
   <div class="card"><div class="card-b stat">
     <span class="lbl">Маршруты</span>
-    <span class="num"><?= (int) ($stats['routes']['total'] ?? 0) ?></span>
+    <span class="num"><?= $esc(lex_adm_int($stats['routes']['total'] ?? 0)) ?></span>
     <span class="sub">зарегистрировано в Router</span>
   </div></div>
   <div class="card"><div class="card-b stat">
@@ -41,8 +41,8 @@ $mods   = $stats['modules'] ?? [];
       <dt>Режим отладки</dt><dd><?php if (!empty($stats['engine']['debug'])): ?><span class="badge info">DEBUG включён</span><?php else: ?><span class="badge muted">production</span><?php endif; ?></dd>
       <dt>Домен сайта</dt><dd class="mono"><?= $esc($stats['site']['domain'] ?? '—') ?></dd>
       <dt>Базовый URL</dt><dd class="mono"><?= $esc($stats['site']['url'] ?? '—') ?></dd>
-      <dt>.env сайта</dt><dd><span class="badge <?= str_contains((string) ($stats['site']['env_file'] ?? ''), 'ОТСУТ') ? 'fail' : 'ok' ?>"><?= $esc($stats['site']['env_file'] ?? '—') ?></span></dd>
-      <dt>Папка config/</dt><dd><span class="badge <?= str_contains((string) ($stats['site']['config_dir'] ?? ''), 'ОТСУТ') ? 'fail' : 'ok' ?>"><?= $esc($stats['site']['config_dir'] ?? '—') ?></span></dd>
+      <dt>.env сайта</dt><dd><span class="badge <?= $esc(lex_adm_env_badge((string) ($stats['site']['env_file'] ?? ''))) ?>"><?= $esc($stats['site']['env_file'] ?? '—') ?></span></dd>
+      <dt>Папка config/</dt><dd><span class="badge <?= $esc(lex_adm_presence_badge((string) ($stats['site']['config_dir'] ?? ''))) ?>"><?= $esc($stats['site']['config_dir'] ?? '—') ?></span></dd>
       <dt>Часовой пояс</dt><dd><?= $esc($stats['engine']['timezone'] ?? '—') ?></dd>
       <dt>SAPI / ОС</dt><dd><?= $esc($stats['php']['sapi'] ?? '—') ?> · <?= $esc($stats['php']['os'] ?? '—') ?></dd>
     </dl></div>
@@ -58,15 +58,15 @@ $mods   = $stats['modules'] ?? [];
         <?php else: ?><span class="badge muted">отключена (сайт живёт без БД)</span><?php endif; ?>
       </dd>
       <?php $cache = $stats['cache'] ?? []; ?>
-      <dt>Кэш</dt><dd>драйвер <span class="mono"><?= $esc($cache['driver'] ?? '—') ?></span> · <?= (int) ($cache['entries'] ?? 0) ?> записей (<?= $esc(lex_adm_bytes($cache['bytes'] ?? 0)) ?>)</dd>
+      <dt>Кэш</dt><dd>драйвер <span class="mono"><?= $esc($cache['driver'] ?? '—') ?></span> · <?= $esc(lex_adm_int($cache['entries'] ?? 0)) ?> записей (<?= $esc(lex_adm_bytes($cache['bytes'] ?? 0)) ?>)</dd>
       <?php $ses = $stats['sessions'] ?? []; ?>
-      <dt>Сессии</dt><dd>драйвер <span class="mono"><?= $esc($ses['driver'] ?? '—') ?></span> · файлов: <?= (int) ($ses['active_files'] ?? 0) ?> · TTL: <?= (int) ($ses['ttl'] ?? 0) ?>с</dd>
+      <dt>Сессии</dt><dd>драйвер <span class="mono"><?= $esc($ses['driver'] ?? '—') ?></span> · файлов: <?= $esc(lex_adm_int(($ses['active_files'] ?? 0))) ?> · TTL: <?= $esc(lex_adm_int(($ses['ttl'] ?? 0))) ?>с</dd>
       <?php $q = $stats['queue'] ?? []; ?>
-      <dt>Очередь</dt><dd><?php if (!empty($q['available'])): ?>в ожидании: <?= (int) ($q['pending'] ?? 0) ?> · с ошибками: <?= (int) ($q['failed'] ?? 0) ?><?php else: ?><span class="badge muted">недоступна</span><?php endif; ?></dd>
+      <dt>Очередь</dt><dd><?php if (!empty($q['available'])): ?>в ожидании: <?= $esc(lex_adm_int(($q['pending'] ?? 0))) ?> · с ошибками: <?= $esc(lex_adm_int(($q['failed'] ?? 0))) ?><?php else: ?><span class="badge muted">недоступна</span><?php endif; ?></dd>
       <?php $mm = $stats['maintenance'] ?? []; ?>
       <dt>Техобслуживание</dt><dd><?php if (!empty($mm['active'])): ?><span class="badge warn">АКТИВНО (503 для посетителей)</span><?php else: ?><span class="badge ok">выключено</span><?php endif; ?></dd>
       <?php $ev = $stats['events'] ?? []; ?>
-      <dt>Событийная шина</dt><dd>слушателей на каналах: <?= (int) ($ev['total'] ?? 0) ?> из <?= count($ev['listeners'] ?? []) ?></dd>
+      <dt>Событийная шина</dt><dd>слушателей на каналах: <?= $esc(lex_adm_int($ev['total'] ?? 0)) ?> из <?= $esc(lex_adm_int(count($ev['listeners'] ?? []))) ?></dd>
       <dt>Текущий запрос</dt><dd><span class="badge info"><?= $esc($stats['request']['method'] ?? '—') ?></span> <span class="mono"><?= $esc($stats['request']['path'] ?? '—') ?></span></dd>
     </dl></div>
   </div>
@@ -115,11 +115,11 @@ $mods   = $stats['modules'] ?? [];
 </div>
 
 <div class="card">
-  <div class="card-h">Модули ядра <span class="hint"><?= count($mods) ?> шт · порядок загрузки слева направо</span></div>
+  <div class="card-h">Модули ядра <span class="hint"><?= $esc(lex_adm_int(count($mods))) ?> шт · порядок загрузки слева направо</span></div>
   <div class="card-b"><div class="chips">
     <?php foreach ($mods as $m): ?>
       <span class="badge <?= empty($m['missing']) ? 'ok' : 'fail' ?>" title="v<?= $esc($m['version']) ?> · провайдер: <?= $esc(implode(', ', (array) ($m['provides'] ?? []))) ?>">
-        <?= (int) ($m['boot_order'] ?? 0) ?>. <?= $esc($m['name']) ?>
+        <?= $esc(lex_adm_int(($m['boot_order'] ?? 0))) ?>. <?= $esc($m['name']) ?>
       </span>
     <?php endforeach; ?>
   </div></div>

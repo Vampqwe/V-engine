@@ -10,10 +10,10 @@
     <span><?php if (!empty($st['root_writable'])): ?><span class="badge ok">запись разрешена</span><?php else: ?><span class="badge fail">недоступен для записи!</span><?php endif; ?></span></div></div>
   <div class="card"><div class="card-b stat"><span class="lbl">Диск</span>
     <span class="num"><?= $esc(number_format($diskPct, 1, ',', ' ')) ?>%</span>
-    <div class="bar"><span class="<?= $diskPct > 90 ? 'fail' : ($diskPct > 75 ? 'warn' : 'ok') ?>" style="width:<?= $esc(number_format(min($diskPct, 100), 1)) ?>%"></span></div>
+    <div class="bar"><span class="<?= $esc(lex_adm_bar_class($diskPct)) ?>" style="width:<?= $esc(lex_adm_pct($diskPct)) ?>%"></span></div>
     <span class="sub">свободно: <?= $esc(lex_adm_bytes($st['disk_free'] ?? false)) ?> из <?= $esc(lex_adm_bytes($st['disk_total'] ?? false)) ?></span></div></div>
   <div class="card"><div class="card-b stat"><span class="lbl">Сессии / Кэш / Очередь</span>
-    <span class="num"><?= (int) ($st['dirs']['sessions']['files'] ?? 0) ?> · <?= (int) ($st['dirs']['cache']['files'] ?? 0) ?> · <?= (int) ($st['dirs']['queue']['files'] ?? 0) ?></span>
+    <span class="num"><?= $esc(lex_adm_int($st['dirs']['sessions']['files'] ?? 0)) ?> · <?= $esc(lex_adm_int($st['dirs']['cache']['files'] ?? 0)) ?> · <?= $esc(lex_adm_int($st['dirs']['queue']['files'] ?? 0)) ?></span>
     <span class="sub">файлов в соответствующих папках</span></div></div>
 </div>
 <div class="card">
@@ -23,7 +23,7 @@
     <?php foreach ((array) ($st['dirs'] ?? []) as $name => $row): ?>
     <tr>
       <td class="mono"><?= $esc((string) $name) ?>/</td>
-      <td><?= (int) $row['files'] ?></td>
+      <td><?= $esc(lex_adm_int($row['files'])) ?></td>
       <td><?= $esc(lex_adm_bytes($row['bytes'])) ?></td>
     </tr>
     <?php endforeach; ?>

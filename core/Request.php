@@ -54,6 +54,18 @@ final class Request implements RequestInterface
         $question = strpos($uri, '?');
         $path = $question === false ? $uri : substr($uri, 0, $question);
 
+        // Работа в подкаталоге веб-рута (например, OSPanel/OpenServer без
+        // виртуального хоста: сайт доступен как https://host/V-engine/...).
+        // Точка входа index.php известна из SCRIPT_NAME — отрезаем её каталог-
+        // префикс от REQUEST_URI, чтобы маршрутизация видела канонический путь.
+        $scriptName = str_replace('\\', '/', (string) ($server['SCRIPT_NAME'] ?? ''));
+        if ($scriptName !== '' && $path !== '') {
+            $baseDir = rtrim(dirname($scriptName), '/');
+            if ($baseDir !== '' && $baseDir !== '.' && str_starts_with($path, $baseDir . '/')) {
+                $path = substr($path, strlen($baseDir)) ?: '/';
+            }
+        }
+
         $headers = [];
         foreach ($server as $key => $value) {
             if (str_starts_with((string) $key, 'HTTP_')) {

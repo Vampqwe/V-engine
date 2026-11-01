@@ -55,6 +55,8 @@ return array(
     'Core\\Exception\\SecurityException' => $baseDir . '/core/Exception/SecurityException.php',
     'Core\\Exception\\UploadException' => $baseDir . '/core/Exception/UploadException.php',
     'Core\\Kernel' => $baseDir . '/core/Kernel.php',
+    'Core\\Module\\Admin\\AdminModule' => $baseDir . '/core/Module/Admin/AdminModule.php',
+    'Core\\Module\\Admin\\AdminStats' => $baseDir . '/core/Module/Admin/AdminStats.php',
     'Core\\Module\\AuditLog\\AuditLogModule' => $baseDir . '/core/Module/AuditLog/AuditLogModule.php',
     'Core\\Module\\AuditLog\\FileAuditLog' => $baseDir . '/core/Module/AuditLog/FileAuditLog.php',
     'Core\\Module\\Cache\\CacheModule' => $baseDir . '/core/Module/Cache/CacheModule.php',

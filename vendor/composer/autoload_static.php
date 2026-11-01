@@ -107,6 +107,8 @@ class ComposerStaticInit1e181d6820a94d994655d89a9802b98e
         'Core\\Exception\\SecurityException' => __DIR__ . '/../..' . '/core/Exception/SecurityException.php',
         'Core\\Exception\\UploadException' => __DIR__ . '/../..' . '/core/Exception/UploadException.php',
         'Core\\Kernel' => __DIR__ . '/../..' . '/core/Kernel.php',
+        'Core\\Module\\Admin\\AdminModule' => __DIR__ . '/../..' . '/core/Module/Admin/AdminModule.php',
+        'Core\\Module\\Admin\\AdminStats' => __DIR__ . '/../..' . '/core/Module/Admin/AdminStats.php',
         'Core\\Module\\AuditLog\\AuditLogModule' => __DIR__ . '/../..' . '/core/Module/AuditLog/AuditLogModule.php',
         'Core\\Module\\AuditLog\\FileAuditLog' => __DIR__ . '/../..' . '/core/Module/AuditLog/FileAuditLog.php',
         'Core\\Module\\Cache\\CacheModule' => __DIR__ . '/../..' . '/core/Module/Cache/CacheModule.php',

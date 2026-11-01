@@ -8,6 +8,7 @@
 - Статус реализации (см. [IMPLEMENTATION.md](./IMPLEMENTATION.md))
 - Инструкции по установке (см. [README.md](./README.md))
 - Графические чертежи (см. [README.md](./README.md))
+- Инструкции для ИИ (см. [AI_DIRECTIVE.md](./AI_DIRECTIVE.md))
 
 **Этот документ содержит:**
 - Непоколебимые принципы
@@ -195,16 +196,19 @@ Doctor **ДОЛЖЕН**:
 
 Без этих модулей ядро **не запустится вообще**:
 
+**Инфраструктурные компоненты ядра** (файлы в корне `core/`, не в `core/Module/`):
+1. **Container** — DI-контейнер (ПЕРВЫЙ, задаёт паттерн для всех модулей)
+2. **EventBus** — событийная шина
+3. **Registry** — реестр модулей
+4. **Router** — маршрутизатор
+5. **Kernel** — точка входа, оркестратор
+
+**Модули P0** (в `core/Module/`):
 1. **FileStorage** — работа с файловой системой
 2. **Logger** — логирование через каналы
 3. **Config** — чтение `.env` и `config/*.php`
-4. **Container** (DI) — контейнер зависимостей
-5. **EventBus** — событийная шина
-6. **Registry** — реестр модулей
-7. **Router** — маршрутизатор
-8. **Kernel** — точка входа
 
-**Критерий Lex:** Если отсутствует хотя бы один P0-модуль → **FAIL**.
+**Критерий Lex:** Если отсутствует хотя бы один P0-компонент → **FAIL**.
 
 #### 8.2. P1 — БЕЗОПАСНОСТЬ И БАЗА (обязательно для production)
 
@@ -253,10 +257,12 @@ Doctor **ДОЛЖЕН**:
 #### 8.5. Порядок реализации (СТРОГО)
 
 ```
-ШАГ 1: P0-модули (FileStorage → Logger → Config → Container → EventBus → Registry → Router → Kernel)
-ШАГ 2: P1-модули (Security → Session → Cookie → Database → View → Cache → ErrorHandler → ExceptionHandler)
-ШАГ 3: P2-модули (Validator → Paginator → FileUpload → Queue → Scheduler → Notification → AuditLog → Migration → Seeder)
-ШАГ 4: P3-модули (FeatureFlag → MaintenanceMode → GracefulShutdown → Doctor → DataPortability → Admin)
+ШАГ 1: Container (задаёт паттерн DI для всех модулей)
+ШАГ 2: FileStorage → Logger → Config (P0-модули)
+ШАГ 3: EventBus → Registry → Router → Kernel (инфраструктура)
+ШАГ 4: P1-модули (Security → Session → Cookie → Database → View → Cache → ErrorHandler → ExceptionHandler)
+ШАГ 5: P2-модули (Validator → Paginator → FileUpload → Queue → Scheduler → Notification → AuditLog → Migration → Seeder)
+ШАГ 6: P3-модули (FeatureFlag → MaintenanceMode → GracefulShutdown → Doctor → DataPortability → Admin)
 ```
 
 **Нельзя пропускать уровни.** Нельзя реализовать Database (P1) до FileStorage (P0).
@@ -284,6 +290,7 @@ class DatabaseModule implements ModuleInterface {
 - Пропускать FileStorage "потому что это очевидно"
 - Пропускать Logger "потому что можно потом добавить"
 - Пропускать Config "потому что .env можно читать напрямую"
+- Пропускать Container "потому что можно использовать new"
 - Реализовывать Database до FileStorage
 
 **Почему:** Это фундамент. Без него всё развалится.
@@ -329,6 +336,7 @@ $view = $container->get(ViewInterface::class);
 **Исключение из Статьи 11.** Единственные места, где допустимо конструировать объекты ядра:
 - `core/Kernel::boot()`
 - `law/bin/*` (Конституционный Суд)
+- Фабрики в `Container::set()`
 
 Пользовательское пространство (`public/*/module`) не имеет этого исключения никогда.
 
@@ -733,14 +741,14 @@ $kernel->dispatch('onRouteResolved'); // ❌ Пользователь не тр�
 
 ```
 core/
-  ├── Kernel.php
-  ├── Registry.php
-  ├── Container.php
-  ├── EventBus.php
-  ├── Router.php
-  ├── helpers.php             (глобальные хелперы: e(), etc.)
+  ├── Kernel.php              ← P0 инфраструктура
+  ├── Registry.php            ← P0 инфраструктура
+  ├── Container.php           ← P0 инфраструктура (ПЕРВЫЙ!)
+  ├── EventBus.php            ← P0 инфраструктура
+  ├── Router.php              ← P0 инфраструктура
+  ├── helpers.php             ← Глобальные хелперы: e(), etc.
   │
-  ├── Contract/               (25 интерфейсов)
+  ├── Contract/               ← 25+ интерфейсов (см. ERRATA)
   │   ├── DatabaseInterface.php
   │   ├── ViewInterface.php
   │   ├── SessionInterface.php
@@ -748,6 +756,11 @@ core/
   │   ├── FileStorageInterface.php
   │   ├── CacheInterface.php
   │   ├── LoggerInterface.php
+  │   ├── ConfigInterface.php         ← ERRATA-001
+  │   ├── ContainerInterface.php      ← ERRATA-002
+  │   ├── EventBusInterface.php       ← ERRATA-003
+  │   ├── RouterInterface.php         ← ERRATA-004
+  │   ├── KernelInterface.php
   │   ├── ValidatorInterface.php
   │   ├── PaginatorInterface.php
   │   ├── FileUploadInterface.php
@@ -762,40 +775,41 @@ core/
   │   ├── SeederInterface.php
   │   ├── HealthCheckInterface.php
   │   ├── ModuleInterface.php
-  │   ├── KernelInterface.php
   │   ├── TestableInterface.php
   │   ├── FactoryInterface.php
   │   └── SiteContextInterface.php
   │
-  ├── Module/                 (20+ модулей)
-  │   ├── Database/
-  │   ├── View/
-  │   ├── Session/
-  │   ├── Cookie/
-  │   ├── FileStorage/
-  │   ├── Cache/
-  │   ├── Logger/
-  │   ├── Security/
-  │   ├── Validator/
-  │   ├── Paginator/
-  │   ├── FileUpload/
-  │   ├── Queue/
-  │   ├── Scheduler/
-  │   ├── Notification/
-  │   ├── AuditLog/
-  │   ├── FeatureFlag/
-  │   ├── MaintenanceMode/
-  │   ├── GracefulShutdown/
-  │   ├── Migration/
-  │   ├── Seeder/
-  │   ├── ErrorHandler/
-  │   ├── ExceptionHandler/
-  │   └── Doctor/
+  ├── Module/                 ← Модули (P0/P1/P2/P3)
+  │   ├── FileStorage/        ← P0
+  │   ├── Logger/             ← P0
+  │   ├── Config/             ← P0
+  │   ├── Database/           ← P1
+  │   ├── Security/           ← P1
+  │   ├── Session/            ← P1
+  │   ├── Cookie/             ← P1
+  │   ├── View/               ← P1
+  │   ├── Cache/              ← P1
+  │   ├── ErrorHandler/       ← P1
+  │   ├── ExceptionHandler/   ← P1
+  │   ├── Validator/          ← P2
+  │   ├── Paginator/          ← P2
+  │   ├── FileUpload/         ← P2
+  │   ├── Queue/              ← P2
+  │   ├── Scheduler/          ← P2
+  │   ├── Notification/       ← P2
+  │   ├── AuditLog/           ← P2
+  │   ├── Migration/          ← P2
+  │   ├── Seeder/             ← P2
+  │   ├── FeatureFlag/        ← P3
+  │   ├── MaintenanceMode/    ← P3
+  │   ├── GracefulShutdown/   ← P3
+  │   ├── Doctor/             ← P3
+  │   └── DataPortability/    ← P3
   │
   ├── Fallback/
-  │   └── 500.html            (аварийная страница)
+  │   └── 500.html            ← Аварийная страница
   │
-  └── Admin/                  (изолированная админка)
+  └── Admin/                  ← Изолированная админка
       ├── Controller/
       ├── View/
       └── assets/
@@ -1181,6 +1195,43 @@ interface DataPortabilityInterface {
 
 ---
 
+## РАЗДЕЛ XII. ERRATA К КОНСТИТУЦИИ v4.0.0
+
+Согласно Статье 37, Конституция не правится до мажорной версии. Расхождения фиксируются как ERRATA и будут исправлены в v5.0.0.
+
+### ERRATA-001: ConfigInterface
+
+**Суть:** Статья 8.1 императивно требует `Config` как P0-модуль, Статья 8.6 использует `ConfigInterface::class` в зависимостях, но интерфейс **отсутствует** в перечне Статьи 16 и в дереве Статьи 19.
+
+**Решение:** `Config` реализуется как P0-модуль с контрактом `ConfigInterface`. Файл `core/Contract/ConfigInterface.php` создаётся по духу Статьи 3.
+
+### ERRATA-002: ContainerInterface
+
+**Суть:** `KernelInterface::getContainer()` возвращает `ContainerInterface`, но интерфейс **не объявлен** в Статье 16.
+
+**Решение:** `core/Contract/ContainerInterface.php` создаётся. `core/Container.php` реализует его.
+
+### ERRATA-003: EventBusInterface
+
+**Суть:** `KernelInterface::getEventBus()` возвращает `EventBusInterface`, но интерфейс **не объявлен** в Статье 16.
+
+**Решение:** `core/Contract/EventBusInterface.php` создаётся. `core/EventBus.php` реализует его.
+
+### ERRATA-004: RouterInterface
+
+**Суть:** Статья 8.1 относит `Router` к P0, но `RouterInterface` **не объявлен** в Статье 16.
+
+**Решение:** `core/Contract/RouterInterface.php` создаётся. `core/Router.php` реализует его.
+
+### Правило применения ERRATA
+
+При реализации:
+- Модули реализуются по **Статье 8** (императивный приоритет)
+- Контракты создаются по **Статье 3** (дух закона)
+- ERRATA не нарушают Конституцию — они дополняют её до v5.0.0
+
+---
+
 **Подписано:**  
 Архитектор движка  
 31 октября 2026 года
@@ -1188,6 +1239,6 @@ interface DataPortabilityInterface {
 **Версия:** 4.0.0  
 **Статус:** Действует  
 **Количество статей:** 37  
-**Количество контрактов:** 25  
+**Количество контрактов:** 25 + 4 ERRATA  
 **Количество теорем:** 6  
 **Количество уровней модулей:** 4 (P0, P1, P2, P3)

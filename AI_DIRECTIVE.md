@@ -39,13 +39,13 @@ V-engine/
 ├── bin/
 │   └── lex                        ← Конституционный Суд
 ├── core/                          ← ЯДРО
-│   ├── Kernel.php
-│   ├── Registry.php
-│   ├── Container.php
-│   ├── EventBus.php
-│   ├── Router.php
+│   ├── Kernel.php                 ← P0 инфраструктура
+│   ├── Registry.php               ← P0 инфраструктура
+│   ├── Container.php              ← P0 инфраструктура (ПЕРВЫЙ!)
+│   ├── EventBus.php               ← P0 инфраструктура
+│   ├── Router.php                 ← P0 инфраструктура
 │   ├── helpers.php                ← e() и другие хелперы
-│   ├── Contract/                  ← 25 интерфейсов
+│   ├── Contract/                  ← 25+ интерфейсов (см. ERRATA)
 │   ├── Module/                    ← Модули (см. ниже)
 │   ├── Fallback/
 │   │   └── 500.html
@@ -58,7 +58,7 @@ V-engine/
 ├── database/                      ← SQL-миграции
 ├── tests/
 ├── composer.json
-├── CONSTITUTION.md
+├── CONSTITUTION.md                ← v4.0.0
 ├── README.md
 ├── IMPLEMENTATION.md
 └── AI_DIRECTIVE.md                ← ЭТОТ ФАЙЛ
@@ -99,12 +99,41 @@ V-engine/
 - Doctor/
 - DataPortability/
 
+**Инфраструктурные компоненты (в корне core/, НЕ в core/Module/):**
+- Container.php (ПЕРВЫЙ!)
+- EventBus.php
+- Registry.php
+- Router.php
+- Kernel.php
+
 **ЗАПРЕЩЕНО создавать:**
 - ❌ Http/ (нет в конституции)
 - ❌ Site/ (дублирует структуру)
 - ❌ Route/ (должен быть Router в корне core/)
 - ❌ EventLog/ (должен быть AuditLog)
 - ❌ Любые другие модули без согласования
+
+---
+
+## 📌 ERRATA К КОНСТИТУЦИИ v4.0.0
+
+Конституция содержит технические расхождения (ERRATA-001...004). 
+Следуй **духу закона**, а не букве:
+
+### Реализуй как P0-модули (Статья 8.1):
+- FileStorage → FileStorageInterface ✅ (есть в Статье 16)
+- Logger → LoggerInterface ✅ (есть в Статье 16)
+- **Config → ConfigInterface** ⚠️ (ERRATA-001, создай контракт)
+
+### Реализуй инфраструктурные контракты (Статья 3):
+- **ContainerInterface** ⚠️ (ERRATA-002, создай контракт)
+- **EventBusInterface** ⚠️ (ERRATA-003, создай контракт)
+- **RouterInterface** ⚠️ (ERRATA-004, создай контракт)
+
+### Правило:
+Если модуль указан в Статье 8 как обязательный — он реализуется.
+Если контракт не объявлен в Статье 16 — он создаётся по аналогии.
+Это не нарушение Конституции, это следование её духу.
 
 ---
 
@@ -116,9 +145,10 @@ V-engine/
 - Интерфейсы в `core/Contract/`, реализации в `core/Module/`
 - Конструктор получает зависимости через DI (не `new`)
 - Каждый модуль реализует `ModuleInterface`
+- **Container реализуется ПЕРВЫМ** — он задаёт паттерн DI для всех модулей
 
 ### Запрещённые:
-- `new \Core\...` вне `core/Kernel.php`
+- `new \Core\...` вне `core/Kernel.php` и фабрик `Container::set()`
 - `$_GET`, `$_POST`, `$_SESSION` напрямую (только через контракты)
 - `htmlspecialchars()` в пользовательском коде (используй `e()`)
 - `$pdo->query()` напрямую (используй `DatabaseInterface`)
@@ -200,9 +230,14 @@ V-engine/
 ```php
 // Создаю FileStorage по конституции (Статья 8.1, P0)
 class FileStorageModule implements ModuleInterface, FileStorageInterface {
-    public function load(string $path): ?string {
-        // реализация
+    public function __construct() {
+        // Нет зависимостей
     }
+}
+
+// Logger получает FileStorage через DI (Статья 3)
+class LoggerModule implements ModuleInterface, LoggerInterface {
+    public function __construct(private FileStorageInterface $storage) {}
 }
 ```
 
@@ -219,7 +254,10 @@ use GuzzleHttp\Client;  // ← ЗАПРЕЩЕНО
 class Foo { ... }  // ← ЗАПРЕЩЕНО
 
 // Создаю дублирующую папку
-core/Site/  // ← ЗАПРЕЩЕНО (уже есть core/Module/Site/)
+core/Site/  // ← ЗАПРЕЩЕНО
+
+// Пропускаю Container и пишу new напрямую
+$logger = new LoggerModule(new FileStorageModule());  // ← ЗАПРЕЩЕНО
 ```
 
 ---
@@ -239,5 +277,6 @@ core/Site/  // ← ЗАПРЕЩЕНО (уже есть core/Module/Site/)
 ---
 
 **Версия:** 1.0.0  
+**Конституция:** v4.0.0  
 **Дата:** 31 октября 2026  
 **Статус:** Обязателен к исполнению

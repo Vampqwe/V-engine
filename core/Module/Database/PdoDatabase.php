@@ -49,10 +49,10 @@ final class PdoDatabase implements DatabaseInterface
         if ($data === []) {
             throw new DatabaseNotConfiguredException('insert() requires at least one column.');
         }
-        [$table, $cols] = $this->identifiers($table, array_keys($data));
-        $placeholders = implode(', ', array_fill(0, count($cols), '?'));
+        [$table, $colList] = $this->identifiers($table, array_keys($data));
+        $placeholders = implode(', ', array_fill(0, count(array_keys($data)), '?'));
 
-        $stmt = $pdo->prepare("INSERT INTO {$table} ({$cols}) VALUES ({$placeholders})");
+        $stmt = $pdo->prepare("INSERT INTO {$table} ({$colList}) VALUES ({$placeholders})");
         $this->bindValues($stmt, array_values($data));
         $stmt->execute();
 
@@ -76,8 +76,9 @@ final class PdoDatabase implements DatabaseInterface
         if ($data === []) {
             throw new DatabaseNotConfiguredException('update() requires at least one column.');
         }
-        [$table, $setCols] = $this->identifiers($table, array_keys($data));
-        $set = implode(', ', array_map(static fn ($c) => "{$c} = ?", $setCols));
+        $columns = array_keys($data);
+        [$table, $setCols] = $this->identifiers($table, $columns);
+        $set = implode(', ', array_map(static fn ($c) => "{$c} = ?", $columns));
         [$where, $values] = $this->where($criteria, array_values($data));
 
         $stmt = $pdo->prepare("UPDATE {$table} SET {$set}{$where}");

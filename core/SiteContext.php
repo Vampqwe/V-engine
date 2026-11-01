@@ -66,15 +66,24 @@ final class SiteContext implements SiteContextInterface
             throw new ContainerException(sprintf('Site folder "%s" does not exist for domain "%s".', $baseFolder, $domain));
         }
 
-        // Схема: явный SITE_URL > эвристика по хосту. Для localhost/127.x/тестовых
-        // .test/.local доменов — http, иначе сессийные cookie с флагом Secure
-        // не устанавливаются браузером по http:// и CSRF-цикл админки ломается.
+        $scheme = 'https';
         if (filter_var($siteUrl, FILTER_VALIDATE_URL) !== false) {
             $scheme = parse_url($siteUrl, PHP_URL_SCHEME) ?: 'https';
         } elseif (preg_match('/^(localhost|127\.|\d+\.\d+\.\d+\.\d+|.*\.(test|local|localhost)$)/', $domain) === 1) {
             $scheme = 'http';
-        } else {
+        } elseif (isset($server['HTTPS']) && filter_var((string) $server['HTTPS'], FILTER_VALIDATE_BOOLEAN)) {
+            // Локальный домен вида v-engine (без публичного суффикса), но
+            // запрос идёт по HTTPS — схема берётся из самого соединения.
             $scheme = 'https';
+        } else {
+            // Неизвестный локальный хост: если в окружении включён CORE_DEBUG
+            // — считаем это dev-стенд и отдаём http (иначе сессионные cookie
+            // с флагом Secure не устанавливаются браузером по http://, и
+            // CSRF-цикл админ-панели ломается). В проде — https по умолчанию.
+            $debugEnv = $env['CORE_DEBUG'] ?? getenv('CORE_DEBUG');
+            if (is_string($debugEnv) && filter_var($debugEnv, FILTER_VALIDATE_BOOLEAN)) {
+                $scheme = 'http';
+            }
         }
         return new self($engineRoot, $domain, $baseFolder, $scheme . '://' . $domain);
     }

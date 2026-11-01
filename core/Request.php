@@ -58,10 +58,13 @@ final class Request implements RequestInterface
         // виртуального хоста: сайт доступен как https://host/V-engine/...).
         // Точка входа index.php известна из SCRIPT_NAME — отрезаем её каталог-
         // префикс от REQUEST_URI, чтобы маршрутизация видела канонический путь.
+        // Сравнение префикса регистронезависимо: на Windows/Apache фактический
+        // URL и SCRIPT_NAME могут различаться по регистру букв пути.
         $scriptName = str_replace('\\', '/', (string) ($server['SCRIPT_NAME'] ?? ''));
         if ($scriptName !== '' && $path !== '') {
             $baseDir = rtrim(dirname($scriptName), '/');
-            if ($baseDir !== '' && $baseDir !== '.' && str_starts_with($path, $baseDir . '/')) {
+            if ($baseDir !== '' && $baseDir !== '.'
+                && strncasecmp($path, $baseDir . '/', strlen($baseDir) + 1) === 0) {
                 $path = substr($path, strlen($baseDir)) ?: '/';
             }
         }

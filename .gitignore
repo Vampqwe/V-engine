@@ -1,33 +1,3 @@
-# Секреты — никогда не коммитим (Конституция §8)
-.env
-.env.local
-.env.*.local
-sites/*/.env
-!/.env.example
-!sites/*/.env.example
-
-# Зависимости и артефакты сборки
-/vendor/
-composer.phar
-
-# Рантайм-данные сайтов (логи, сессии, кэш, загрузка, БД)
-sites/*/storage/logs/
-sites/*/storage/cache/
-sites/*/storage/sessions/
-sites/*/storage/uploads/
-sites/*/storage/*.sqlite
-sites/*/storage/maintenance.json
-sites/*/storage/scheduler/*.last
-sites/*/storage/flags.json
-
-# Кэш PHPUnit
 .phpunit.cache/
-
-# Локальная конфигурация OpenServer (пути специфичны для машины разработчика)
-/.osp/
-
-# IDE / OS
-.idea/
-.vscode/
-.DS_Store
-Thumbs.db
+sites/*/storage/logs/*.log
+sites/*/storage/maintenance.json

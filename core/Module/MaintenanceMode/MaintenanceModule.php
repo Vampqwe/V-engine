@@ -58,9 +58,12 @@ final class MaintenanceModule implements ModuleInterface
 
 /**
  * Middleware режима техработ: 503 + Retry-After для всех, кроме holders
- * bypass-токена (?token=... или X-Maintenance-Token). Админ-путь не является
- * исключением по умолчанию — доступ админа только через токен (§31: никаких
- * «магических» обходов по IP/пути без явной конфигурации).
+ * bypass-токена (?token=... или X-Maintenance-Token). Исключение — пути
+ * админ-панели ядра (/admin*): их блокировать нельзя, иначе панель
+ * «запечатает себя» включённым техрежимом и выключить его уже не выйдет.
+ * Панель защищена собственными механизмами (CSRF §9, admin.enabled), а
+ * остальной сайт остаётся закрытым 503 — это явный, а не «магический»
+ * обход (§31).
  */
 final class MaintenanceMiddleware implements MiddlewareInterface
 {
@@ -70,6 +73,10 @@ final class MaintenanceMiddleware implements MiddlewareInterface
 
     public function handle(RequestInterface $request, callable $next): object
     {
+        $path = '/' . ltrim($request->getPath(), '/');
+        if ($path === '/admin' || str_starts_with($path, '/admin/')) {
+            return $next($request); // админка доступна всегда — включая maint-off
+        }
         if ($this->mode->blocksRequest($this->token($request))) {
             $state = $this->mode->state();
             return Response::html(

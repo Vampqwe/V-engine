@@ -102,6 +102,16 @@ final class Container implements ContainerInterface
         return isset($this->protected[$id]);
     }
 
+    /**
+     * Возвращает зарегистрированную фабрику сервиса без резолва и кеширования.
+     * Используется ядром (Session Set-Cookie слой в Kernel), чтобы получить
+     * тот же пер-запросовый экземпляр, что создаёт protect()-фабрика.
+     */
+    public function rawFactory(string $id): ?callable
+    {
+        return $this->bindings[$id] ?? null;
+    }
+
     // =========================================================================
     // Resolution
     // =========================================================================
@@ -144,6 +154,14 @@ final class Container implements ContainerInterface
 
     public function has(string $id): bool
     {
+        // Интерфейсы не «существуют» как классы — для них проверка existence
+        // бессмысленна: контракт доступен, только если явно зарегистрирован.
+        if (interface_exists($id)) {
+            return isset($this->instances[$id])
+                || isset($this->bindings[$id])
+                || isset($this->aliases[$id]);
+        }
+
         return isset($this->instances[$id])
             || isset($this->bindings[$id])
             || isset($this->aliases[$id])

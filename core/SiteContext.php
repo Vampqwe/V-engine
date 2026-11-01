@@ -66,7 +66,16 @@ final class SiteContext implements SiteContextInterface
             throw new ContainerException(sprintf('Site folder "%s" does not exist for domain "%s".', $baseFolder, $domain));
         }
 
-        $scheme = filter_var($siteUrl, FILTER_VALIDATE_URL) !== false ? (parse_url($siteUrl, PHP_URL_SCHEME) ?: 'https') : 'https';
+        // Схема: явный SITE_URL > эвристика по хосту. Для localhost/127.x/тестовых
+        // .test/.local доменов — http, иначе сессийные cookie с флагом Secure
+        // не устанавливаются браузером по http:// и CSRF-цикл админки ломается.
+        if (filter_var($siteUrl, FILTER_VALIDATE_URL) !== false) {
+            $scheme = parse_url($siteUrl, PHP_URL_SCHEME) ?: 'https';
+        } elseif (preg_match('/^(localhost|127\.|\d+\.\d+\.\d+\.\d+|.*\.(test|local|localhost)$)/', $domain) === 1) {
+            $scheme = 'http';
+        } else {
+            $scheme = 'https';
+        }
         return new self($engineRoot, $domain, $baseFolder, $scheme . '://' . $domain);
     }
 

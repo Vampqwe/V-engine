@@ -52,6 +52,27 @@ final class Router implements RouterInterface
         $this->add('POST', $pattern, $handler, $middleware);
     }
 
+    /**
+     * Срез зарегистрированных маршрутов (только для диагностики: админ-панель
+     * ядра, CLI). Возвращает плоский список записей без замыканий-хендлеров.
+     *
+     * @return array<int, array{method:string, pattern:string, middleware:string[]}>
+     */
+    public function all(): array
+    {
+        $list = [];
+        foreach ($this->routes as $method => $entries) {
+            foreach ($entries as $entry) {
+                $list[] = [
+                    'method'     => (string) $method,
+                    'pattern'    => (string) $entry['pattern'],
+                    'middleware' => $entry['middleware'],
+                ];
+            }
+        }
+        return $list;
+    }
+
     public function match(array $methods, string $pattern, callable $handler, array $middleware = []): void
     {
         if ($methods === []) {

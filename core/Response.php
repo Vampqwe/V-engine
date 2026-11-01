@@ -76,6 +76,11 @@ final class Response
         return $clone;
     }
 
+    public function hasHeader(string $name): bool
+    {
+        return isset($this->headers[self::canonicalName($name)]);
+    }
+
     public function withHeader(string $name, string $value): self
     {
         $clone = clone $this;

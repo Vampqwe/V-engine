@@ -160,7 +160,7 @@ final class CacheHealth extends AbstractHealth
     public function healthCheck(): array
     {
         try {
-            $key = 'doctor:probe:' . bin2hex(random_bytes(4));
+            $key = 'doctor_probe_' . bin2hex(random_bytes(4));
             $this->cache->set($key, 1, 30);
             if ($this->cache->get($key) !== 1) {
                 return $this->health(self::STATUS_FAIL, 'Cache roundtrip failed.');

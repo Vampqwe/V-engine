@@ -31,6 +31,22 @@ return [
             'message' => 'Обнаружено прямое создание объекта ядра (new \\Core\\...)',
             'hint' => 'Используйте $container->get(Interface::class) вместо прямого создания'
         ],
+        'C-016' => [
+            'article' => '§16.3. Резолв сервисов только по FQN контракта',
+            'scope' => 'USER',
+            'severity' => 'FAIL',
+            'detector' => 'ContainerGetLiteralDetector',
+            'message' => 'Запрещён container->get()/kernel->get() со строковым литералом',
+            'hint' => 'Используйте $container->get(SomeContract::class) — только FQN контракта'
+        ],
+        'C-020' => [
+            'article' => '§20. Файловый jail: весь ФС-вывод через FileStorageInterface',
+            'scope' => 'USER',
+            'severity' => 'FAIL',
+            'detector' => 'DirectFsAccessDetector',
+            'message' => 'Прямой доступ к файловой системе в обход FileStorageInterface',
+            'hint' => 'Используйте FileStorageInterface (load/save/delete/exists/list)'
+        ],
         'C-031' => [
             'article' => '§33. Изолированные каналы логирования',
             'scope' => 'USER',

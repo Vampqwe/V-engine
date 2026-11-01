@@ -1,0 +1,29 @@
+<?php declare(strict_types=1); ?>
+<?php include __DIR__ . '/helpers.php'; ?>
+<?php include __DIR__ . '/layout.phtml'; ?>
+<?php $s = lex_adm_health_class((string) ($stats['health']['status'] ?? '')); ?>
+<h1 class="page-title">Здоровье ядра</h1>
+<p class="page-sub">Агрегатор Doctor: все модули, реализующие HealthCheckInterface (§8.4).</p>
+<div class="grid cols-4" style="margin-bottom:16px">
+  <div class="card"><div class="card-b stat"><span class="lbl">Итог</span>
+    <span class="num" style="color:var(--<?= $s === 'ok' ? 'success' : ($s === 'fail' ? 'danger' : 'attention') ?>)"><?= $esc(lex_adm_icon($s)) ?> <?= $esc(strtoupper((string) ($stats['health']['status'] ?? 'n/a'))) ?></span></div></div>
+  <div class="card"><div class="card-b stat"><span class="lbl">OK</span><span class="num" style="color:var(--success)"><?= (int) ($stats['health']['summary']['ok'] ?? 0) ?></span></div></div>
+  <div class="card"><div class="card-b stat"><span class="lbl">Предупреждения</span><span class="num" style="color:var(--attention)"><?= (int) ($stats['health']['summary']['warning'] ?? 0) ?></span></div></div>
+  <div class="card"><div class="card-b stat"><span class="lbl">Ошибки</span><span class="num" style="color:var(--danger)"><?= (int) ($stats['health']['summary']['fail'] ?? 0) ?></span></div></div>
+</div>
+<div class="card">
+  <div class="card-h">Проверки <span class="hint"><?= count($stats['health']['checks'] ?? []) ?> шт</span></div>
+  <?php if (($stats['health']['checks'] ?? []) === []): ?><div class="empty">Doctor не зарегистрирован или проверок нет.</div><?php else: ?>
+  <table class="data">
+    <tr><th></th><th>Проверка</th><th>Статус</th><th>Сообщение</th></tr>
+    <?php foreach ($stats['health']['checks'] as $c): $cls = lex_adm_health_class((string) ($c['status'] ?? '')); ?>
+    <tr>
+      <td><?= $esc(lex_adm_icon($cls)) ?></td>
+      <td><strong><?= $esc($c['name'] ?? '?') ?></strong></td>
+      <td><span class="badge <?= $esc($cls) ?>"><?= $esc($c['status'] ?? '?') ?></span></td>
+      <td style="color:var(--fg-muted)"><?= $esc($c['message'] ?? '') ?><?php if (!empty($c['context']) && is_array($c['context'])): ?> <span class="mono" style="font-size:11px"><?= $esc(json_encode($c['context'], JSON_UNESCAPED_UNICODE)) ?></span><?php endif; ?></td>
+    </tr>
+    <?php endforeach; ?>
+  </table>
+  <?php endif; ?>
+</div>

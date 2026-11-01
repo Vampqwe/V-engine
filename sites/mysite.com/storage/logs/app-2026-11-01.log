@@ -1,0 +1,1 @@
+{"ts":"2026-11-01T19:14:09+01:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"mysite.com"}}

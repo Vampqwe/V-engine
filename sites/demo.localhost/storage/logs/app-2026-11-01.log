@@ -1,0 +1,30 @@
+{"ts":"2026-11-01T18:13:41+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:13:45+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:13:45+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:13:45+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:13:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:13:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:13:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:14:09+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:14:09+00:00","level":"INFO","channel":"app","message":"doctor.probe"}
+{"ts":"2026-11-01T18:14:12+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:14:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:14:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:14:43+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:22:25+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:22:25+00:00","level":"INFO","channel":"app","message":"doctor.probe"}
+{"ts":"2026-11-01T18:22:31+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:22:31+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:22:31+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:22:35+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:22:35+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:44:52+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:44:52+00:00","level":"INFO","channel":"app","message":"doctor.probe"}
+{"ts":"2026-11-01T18:44:52+00:00","level":"ERROR","channel":"app","message":"kernel.run.crashed","context":{"message":"Object of class Core\\Module\\Config\\ConfigModule could not be converted to string","file":"\/workspace\/core\/Module\/Admin\/AdminStats.php:128"}}
+{"ts":"2026-11-01T18:44:52+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:44:52+00:00","level":"INFO","channel":"app","message":"doctor.probe"}
+{"ts":"2026-11-01T18:44:52+00:00","level":"ERROR","channel":"app","message":"kernel.run.crashed","context":{"message":"Object of class Core\\Module\\Config\\ConfigModule could not be converted to string","file":"\/workspace\/core\/Module\/Admin\/AdminStats.php:128"}}
+{"ts":"2026-11-01T18:44:55+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:44:59+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T18:44:59+00:00","level":"INFO","channel":"app","message":"doctor.probe"}
+{"ts":"2026-11-01T18:44:59+00:00","level":"ERROR","channel":"app","message":"kernel.run.crashed","context":{"message":"Object of class Core\\Module\\Config\\ConfigModule could not be converted to string","file":"\/workspace\/core\/Module\/Admin\/AdminStats.php:128"}}

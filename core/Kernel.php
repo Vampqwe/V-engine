@@ -25,6 +25,7 @@ use Core\Contract\CacheInterface;
 use Core\Exception\ContainerException;
 use Closure;
 use Core\Exception\EngineException;
+use Core\Module\Admin\AdminModule;
 use Core\Module\AuditLog\AuditLogModule;
 use Core\Module\Cache\CacheModule;
 use Core\Module\Config\ConfigModule;
@@ -126,6 +127,7 @@ final class Kernel implements KernelInterface
             new MaintenanceModule(),        // MaintenanceModeInterface + системный middleware 503
             new DataPortabilityModule(),    // DataPortabilityInterface (экспорт/импорт §8.4)
             new DoctorModule(),             // Doctor: агрегатор HealthCheck — поднимается ПОСЛЕДНИМ
+            new AdminModule(),                // Admin: встроенная админ-панель ядра /admin/* (тёмная тема)
         ];
     }
 

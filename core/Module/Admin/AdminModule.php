@@ -85,8 +85,20 @@ final class AdminModule implements ModuleInterface
         // (копируются модулем при boot, если отсутствуют — см. publishTemplates).
         $this->publishTemplates($container->get(FileStorageInterface::class));
 
-        $render = static function (string $template, array $data) use ($view, $stats): Response {
+        $render = static function (string $template, array $data) use ($view, $stats, $security, $container): Response {
             $data['stats'] ??= null;
+            // CSRF-токен для POST-форм панели (§9) — всегда свежий на каждый рендер.
+            $data['csrf'] = $security->csrfToken();
+            // Flash-сообщение после POST-действия — показать один раз.
+            if ($container->has(SessionInterface::class)) {
+                $session = $container->get(SessionInterface::class);
+                assert($session instanceof SessionInterface);
+                $flash = $session->get('admin.flash');
+                if (is_string($flash) && $flash !== '') {
+                    $data['flash'] = $flash;
+                    $session->remove('admin.flash');
+                }
+            }
             return Response::html($view->render('admin/' . $template, $data));
         };
 
@@ -215,16 +227,39 @@ final class AdminModule implements ModuleInterface
      * Опубликовать шаблоны панели в jailed-root сайта (storage/views/admin/),
      * если их там ещё нет. Источники — файлы core/Module/Admin/templates/,
      * запись — только через FileStorageInterface (§20).
+     *
+     * Версия шаблонов хранится рядом (views/admin/.version): при обновлении
+     * движка опубликованные копии автоматически перезаписываются эталонными.
      */
     private function publishTemplates(FileStorageInterface $storage): void
     {
-        $sourceDir = dirname(__DIR__, 2) . '/Module/Admin/templates';
+        $sourceDir = __DIR__ . '/templates';
+        $versionPath = 'views/admin/.version';
+        $current = self::TEMPLATE_VERSION;
+        if (!$storage->exists($versionPath) || trim((string) $storage->load($versionPath)) !== $current) {
+            foreach (self::TEMPLATE_NAMES as $name) {
+                $ext = $name === 'helpers' ? 'php' : 'phtml';
+                $path = 'views/admin/' . $name . '.' . $ext;
+                $file = $sourceDir . '/' . $name . '.' . $ext;
+                if (!is_file($file)) {
+                    throw new EngineException('Admin template source missing: ' . $name);
+                }
+                $content = file_get_contents($file);
+                if ($content === false) {
+                    throw new EngineException('Cannot read admin template: ' . $name);
+                }
+                $storage->save($path, $content);
+            }
+            $storage->save($versionPath, $current);
+            return;
+        }
         foreach (self::TEMPLATE_NAMES as $name) {
-            $path = 'views/admin/' . $name . '.phtml';
+            $ext = $name === 'helpers' ? 'php' : 'phtml';
+            $path = 'views/admin/' . $name . '.' . $ext;
             if ($storage->exists($path)) {
                 continue;
             }
-            $file = $sourceDir . '/' . $name . '.phtml';
+            $file = $sourceDir . '/' . $name . '.' . $ext;
             if (!is_file($file)) {
                 throw new EngineException('Admin template source missing: ' . $name);
             }
@@ -236,6 +271,9 @@ final class AdminModule implements ModuleInterface
         }
     }
 
+    /** Эталонная версия набора шаблонов панели (смена => переустановка копий) */
+    private const TEMPLATE_VERSION = '1.0.0';
+
     /** @var string[] имена шаблонов панели (публикуются в storage/views/admin/) */
-    private const TEMPLATE_NAMES = ['layout', 'dashboard', 'modules', 'health', 'routes', 'storage', 'php'];
+    private const TEMPLATE_NAMES = ['helpers', 'layout', 'dashboard', 'modules', 'health', 'routes', 'storage', 'php'];
 }

@@ -39,7 +39,8 @@ final class RuleEngine
     public function run(string $rootPath): array
     {
         $violations = [];
-        $directoriesToScan = ['core', 'public', 'config', 'law'];
+        // §7: пользовательское пространство сайтов тоже под надзором Закона
+        $directoriesToScan = ['core', 'public', 'config', 'law', 'sites'];
 
         foreach ($directoriesToScan as $dir) {
             $fullDir = $rootPath . DIRECTORY_SEPARATOR . $dir;

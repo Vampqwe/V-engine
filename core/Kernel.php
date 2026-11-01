@@ -23,6 +23,7 @@ use Core\Contract\CookieInterface;
 use Core\Contract\DatabaseInterface;
 use Core\Contract\CacheInterface;
 use Core\Exception\ContainerException;
+use Closure;
 use Core\Exception\EngineException;
 use Core\Module\Cache\CacheModule;
 use Core\Module\Config\ConfigModule;
@@ -345,7 +346,7 @@ final class Kernel implements KernelInterface
     {
         $handler = $result->handler;
         assert($handler !== null);
-        $reflection = new ReflectionFunction(Closure::fromCallable($handler));
+        $reflection = new \ReflectionFunction(Closure::fromCallable($handler));
         $args = [$request];
         foreach ($reflection->getParameters() as $index => $param) {
             if ($index === 0) {

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 // ==============================================================================
-// 1. ЕДИНАЯ ТОЧКА ОТЧЕТА
+// 1. ЕДИНАЯ ТОЧКА ОТЧЕТА (Статья 31 Конституции)
 // ==============================================================================
 define('ENGINE_BASE_PATH', dirname(__DIR__));
 
@@ -27,24 +27,100 @@ register_shutdown_function(function (): void {
 });
 
 // ==============================================================================
-// 3. ИНИЦИАЛИЗАЦИЯ ЯДРА
+// 3. ЗАГРУЗЧИК (Composer autoload — единственный разрешённый require)
+// ==============================================================================
+$autoload = ENGINE_BASE_PATH . '/vendor/autoload.php';
+if (!is_file($autoload)) {
+    http_response_code(500);
+    header('Content-Type: text/plain; charset=utf-8');
+    echo 'Engine is not installed: run "composer install".';
+    exit(1);
+}
+require_once $autoload;
+
+use Core\Contract\ConfigInterface;
+use Core\Contract\RequestInterface;
+use Core\Contract\ViewInterface;
+use Core\Kernel;
+use Core\Module\Config\Config;
+use Core\Request;
+use Core\Response;
+
+// ==============================================================================
+// 4. ОКРУЖЕНИЕ ДВИЖКА (корневой .env — значения по умолчанию для CLI/демо).
+//    Каждый сайт определяет СВОЙ .env: sites/<домен>/.env — его читает модуль
+//    Config через SiteContext (многосайтовость: SITE_URL жёстко => SITE_DIR).
+// ==============================================================================
+$engineEnv = [];
+$rootEnvPath = ENGINE_BASE_PATH . '/.env';
+if (is_file($rootEnvPath)) {
+    try {
+        $engineEnv = Config::parseEnvFile($rootEnvPath);
+    } catch (\Throwable) {
+        $engineEnv = []; // повреждённый корневой .env не должен ронять люк
+    }
+}
+foreach ($engineEnv as $key => $value) {
+    if (is_string($key) && getenv($key) === false) {
+        putenv($key . '=' . (string) $value);
+    }
+}
+
+// ==============================================================================
+// 5. ИНИЦИАЛИЗАЦИЯ ЯДРА: boot -> маршруты -> run -> send (§16.9)
+//    Вывод делает ТОЛЬКО Kernel::send() (§31).
 // ==============================================================================
 try {
-    require_once ENGINE_BASE_PATH . '/core/Kernel.php';
-    
-    // Здесь будет дальнейший бутстрап:
-    // $kernel = new \Core\Kernel();
-    // $kernel->boot();
-    // $kernel->run();
-    
-} catch (Throwable $e) {
-    // Если ядро загрузилось, но упало при инициализации, 
-    // в будущем этим займется ExceptionHandler ядра.
-    // Пока используем запасной вариант.
+    $kernel = new Kernel(ENGINE_BASE_PATH, null, $_SERVER, $engineEnv);
+    $kernel->boot();
+
+    /** @var ConfigInterface $config */
+    $config = $kernel->get(ConfigInterface::class);
+    /** @var \Core\Router $router */
+    $router = $kernel->get(\Core\Contract\RouterInterface::class);
+
+    register_demo_routes($kernel, $router, $config);
+
+    $request = Request::fromServer($_SERVER, $_GET, $_POST);
+    $response = $kernel->run($request);
+} catch (\Throwable $e) {
+    // Ядро загрузилось, но упало до/во время boot(): сырое исключение наружу
+    // не выпускаем (§31) — только люк-500 с трассировкой в режиме debug.
+    $debug = filter_var(getenv('CORE_DEBUG') ?: 'false', FILTER_VALIDATE_BOOLEAN);
     http_response_code(500);
-    $fallback = ENGINE_BASE_PATH . '/core/Fallback/500.html';
-    if (file_exists($fallback)) {
-        readfile($fallback);
-    }
+    header('Content-Type: text/plain; charset=utf-8');
+    echo $debug ? 'BOOT ERROR: ' . $e . "\n" : 'Internal Server Error';
     exit(1);
+}
+
+$kernel->send($response);
+
+// ==============================================================================
+// 6. ДЕМО-МАРШРУТЫ (в реальном проекте маршруты регистрируют модули сайта;
+//    здесь — минимальный пример полного HTTP-цикла через контракты ядра)
+// ==============================================================================
+function register_demo_routes(Kernel $kernel, \Core\Router $router, ConfigInterface $config): void
+{
+    $router->get('/', static function (RequestInterface $request) use ($kernel, $config): Response {
+        /** @var ViewInterface $view */
+        $view = $kernel->get(ViewInterface::class);
+        $html = $view->render('home', [
+            'title'   => 'LEX Engine · ' . (string) $config->get('engine.site_url', ''),
+            'site'    => basename((string) $config->get('engine.site_dir', 'demo')),
+            'version' => Kernel::VERSION,
+        ]);
+        return Response::html($html);
+    });
+
+    $router->get('/health', static function (RequestInterface $request) use ($kernel): Response {
+        $modules = [];
+        foreach ($kernel->getRegistry()->all() as $module) {
+            $modules[] = ['name' => $module->getName(), 'version' => $module->getVersion()];
+        }
+        return Response::json([
+            'status'  => 'ok',
+            'engine'  => Kernel::VERSION,
+            'modules' => $modules,
+        ]);
+    });
 }

@@ -353,26 +353,48 @@ final class Kernel implements KernelInterface
         // запросе, и любое POST-действие падало бы с 403.
         // Проверка hasIncomingId() обязательна: повторная выдача Set-Cookie после
         // regenerate() перезаписала бы новый сид старым (гонка куков).
-        if ($this->container->has(SessionInterface::class)) {
-            $session = $this->container->get(SessionInterface::class);
-            assert($session instanceof SessionInterface);
-            if ($session instanceof NativeSession && !$session->hasIncomingId()) {
-                $secure = str_starts_with((string) $this->container->get(SiteContextInterface::class)->getBaseUrl(), 'https://');
-                $parts = [
-                    $session->getCookieName() . '=' . $session->id(),
-                    'Path=/',
-                    'HttpOnly',
-                    'SameSite=Lax',
-                    'Max-Age=' . (int) ($this->container->get(ConfigInterface::class)->get('session.ttl', 1800)),
-                ];
-                if ($secure) {
-                    $parts[] = 'Secure';
-                }
-                $response = $response->withHeader('Set-Cookie', implode('; ', $parts));
+        // Разрешение берётся напрямую из factory (protect): container->get()
+        // создал бы новую сессию со свежим сидом, и выданный SID не совпал бы
+        // с тем, в котором реально лежит CSRF-токен.
+        $session = $this->resolveBootSession();
+        if ($session instanceof NativeSession && !$session->hasIncomingId()) {
+            $secure = str_starts_with((string) $this->container->get(SiteContextInterface::class)->getBaseUrl(), 'https://');
+            $parts = [
+                $session->getCookieName() . '=' . $session->id(),
+                'Path=/',
+                'HttpOnly',
+                'SameSite=Lax',
+                'Max-Age=' . (int) ($this->container->get(ConfigInterface::class)->get('session.ttl', 1800)),
+            ];
+            if ($secure) {
+                $parts[] = 'Secure';
             }
+            $response = $response->withHeader('Set-Cookie', implode('; ', $parts));
         }
 
         return $response;
+    }
+
+    /**
+     * Экземпляр сессии текущего запроса, если он уже создавался в цикле
+     * (например, Security при выдаче CSRF-токена). Берётся из factory,
+     * сохранённого SessionModule через protect(): повторный вызов вернёт
+     * тот же самый объект (NativeSession кеширует данные сам). Если сессия
+     * в этом запросе не использовалась — null (Set-Cookie не нужен).
+     */
+    private function resolveBootSession(): ?SessionInterface
+    {
+        if (!$this->container->has(SessionInterface::class)) {
+            return null;
+        }
+        $factory = method_exists($this->container, 'rawFactory')
+            ? $this->container->rawFactory(SessionInterface::class)
+            : null;
+        if ($factory instanceof \Closure) {
+            $instance = $factory();
+            return $instance instanceof SessionInterface ? $instance : null;
+        }
+        return null;
     }
 
     private function handleFound(RequestInterface $request, RouteResult $result, EventBusInterface $bus, LoggerInterface $logger): Response

@@ -61,7 +61,15 @@ final class SessionModule implements ModuleInterface
         // jailed-root хранилища уже ограничен сайтом — sessions-подпапка безопасна.
         $storage->createDir($dir);
 
-        $factory = static function () use ($driver, $dir, $cookieName, $storage, $config): NativeSession {
+        // Пер-запросовый кеш экземпляра: factory вызывается при каждом get(),
+        // а сессия обязана быть ОДНОЙ на запрос (иначе CSRF-токен, записанный
+        // в один экземпляр, не увидит Set-Cookie-слой, читающий другой).
+        $cached = null;
+
+        $factory = static function () use (&$cached, $driver, $dir, $cookieName, $storage, $config): NativeSession {
+            if ($cached instanceof NativeSession) {
+                return $cached;
+            }
             $fileStore = new FileSessionStore($storage, $dir . '/sess_');
             $incoming = self::incomingSid($cookieName);
 

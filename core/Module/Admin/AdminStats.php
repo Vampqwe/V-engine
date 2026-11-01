@@ -80,15 +80,17 @@ final class AdminStats
     {
         $config = $container->has(ConfigInterface::class)
             ? $container->get(ConfigInterface::class) : null;
+        // ВНИМАНИЕ: get('core') возвращает массив секции — кастить к string нельзя.
+        $debugValue = $config instanceof ConfigInterface ? $config->get('core.debug', false) : false;
         return [
             'name'        => 'LEX Engine (V-Engine)',
             'version'     => \Core\Kernel::VERSION,
             'router'      => Router::VERSION,
-            'debug'       => $config instanceof ConfigInterface
-                && filter_var((string) $config->get('core.debug', 'false'), FILTER_VALIDATE_BOOLEAN),
+            'admin_panel' => AdminModule::VERSION,
+            'debug'       => is_bool($debugValue) ? $debugValue : filter_var((string) (is_scalar($debugValue) ? $debugValue : 'false'), FILTER_VALIDATE_BOOLEAN),
             'timezone'    => date_default_timezone_get(),
             'php_version' => PHP_VERSION,
-            'sections'    => $config instanceof ConfigInterface ? array_keys($config->all()) : [],
+            'sections'    => $config instanceof \Core\Module\Config\Config ? $config->sectionNames() : [],
         ];
     }
 
@@ -124,8 +126,9 @@ final class AdminStats
     private function modules(Registry $registry): array
     {
         $order = [];
-        foreach ($registry->resolveBootOrder() as $i => $name) {
-            $order[(string) $name] = $i + 1;
+        // resolveBootOrder() возвращает объекты ModuleInterface — имя берём из getName().
+        foreach ($registry->resolveBootOrder() as $i => $module) {
+            $order[$module->getName()] = $i + 1;
         }
         $rows = [];
         foreach ($registry->inspect() as $entry) {

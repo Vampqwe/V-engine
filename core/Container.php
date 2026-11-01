@@ -144,6 +144,14 @@ final class Container implements ContainerInterface
 
     public function has(string $id): bool
     {
+        // Интерфейсы не «существуют» как классы — для них проверка existence
+        // бессмысленна: контракт доступен, только если явно зарегистрирован.
+        if (interface_exists($id)) {
+            return isset($this->instances[$id])
+                || isset($this->bindings[$id])
+                || isset($this->aliases[$id]);
+        }
+
         return isset($this->instances[$id])
             || isset($this->bindings[$id])
             || isset($this->aliases[$id])

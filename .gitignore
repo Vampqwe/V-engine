@@ -1,1 +1,2 @@
-sites/*/storage/views/
+sites/*/storage/sessions/
+*.log

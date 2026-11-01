@@ -116,6 +116,12 @@ final class Config implements ConfigInterface
         return $this->get($key, $sentinel) !== $sentinel;
     }
 
+    /** Имена всех загруженных секций (для диагностики, без раскрытия значений). */
+    public function sectionNames(): array
+    {
+        return array_keys($this->sections);
+    }
+
     public function all(?string $section = null): array
     {
         if ($section === null) {

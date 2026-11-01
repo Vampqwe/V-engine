@@ -58,6 +58,13 @@ final class RuleEngine
 
         foreach ($iterator as $file) {
             if (!$file->isFile()) continue;
+            // Runtime-артефакты сайтов (логи, сессии, кэш, опубликованные
+            // шаблоны) — порождения ядра, не исходный код: под надзором Закона
+            // только авторские файлы сайтов (config/bootstrap/storage/migrations).
+            $rp = str_replace("\\", '/', $file->getPathname());
+            if (preg_match('#sites/[^/]+/storage/(logs|sessions|cache|queue|uploads|views)/#', $rp)) {
+                continue;
+            }
             $ext = $file->getExtension();
             // .php — все правила; .phtml — правила для шаблонов (C-040)
             if ($ext !== 'php' && $ext !== 'phtml') continue;

@@ -8,17 +8,17 @@
   <div class="card"><div class="card-h">Интерпретатор</div><div class="card-b"><dl class="kv">
     <dt>Версия PHP</dt><dd><strong><?= $esc($p['version'] ?? '—') ?></strong> · SAPI: <?= $esc($p['sapi'] ?? '—') ?> · <?= $esc($p['os'] ?? '—') ?></dd>
     <dt>Память</dt><dd><?= $esc((string) ($p['memory_mb'] ?? '—')) ?> МБ (пик <?= $esc((string) ($p['peak_mb'] ?? '—')) ?> МБ) / лимит <?= $esc($p['limit'] ?? '—') ?></dd>
-    <dt>Загрузка CPU</dt><dd><?= $p['load'] === null ? '—' : $esc(implode(' / ', array_map(static fn (float $f): string => number_format($f, 2), (array) $p['load']))) ?></dd>
+    <dt>Загрузка CPU</dt><dd><?= $esc(lex_adm_load_str($p['load'] ?? null)) ?></dd>
     <dt>max_execution_time</dt><dd><?= $esc($p['max_exec'] ?? '—') ?> с</dd>
     <dt>upload_max_filesize</dt><dd><?= $esc($p['upload_max'] ?? '—') ?></dd>
     <dt>post_max_size</dt><dd><?= $esc($p['post_max'] ?? '—') ?></dd>
-    <dt>display_errors</dt><dd><span class="badge <?= strtolower((string) ($p['display_errors'] ?? '')) === '1' ? 'warn' : 'ok' ?>"><?= $esc($p['display_errors'] ?? '—') ?></span></dd>
-    <dt>Opcache</dt><dd><?php if (!empty($p['opcache']['enabled'])): ?><span class="badge ok">включён (hits: <?= (int) ($p['opcache']['hits'] ?? 0) ?>)</span><?php else: ?><span class="badge muted">выключен</span><?php endif; ?></dd>
+    <dt>display_errors</dt><dd><span class="badge <?= $esc(lex_adm_flag_badge($p['display_errors'] ?? '')) ?>"><?= $esc($p['display_errors'] ?? '—') ?></span></dd>
+    <dt>Opcache</dt><dd><?php if (!empty($p['opcache']['enabled'])): ?><span class="badge ok">включён (hits: <?= $esc(lex_adm_int($p['opcache']['hits'] ?? 0)) ?>)</span><?php else: ?><span class="badge muted">выключен</span><?php endif; ?></dd>
   </dl></div></div>
   <div class="card"><div class="card-h">Расширения</div><div class="card-b">
     <p style="margin:0 0 6px;color:var(--fg-muted);font-size:12px">Обязательные (composer.json require)</p>
     <div class="chips" style="margin-bottom:14px"><?php foreach ((array) ($p['extensions']['required'] ?? []) as $e): ?>
-      <span class="badge <?= $e['loaded'] ? 'ok' : 'fail' ?>"><?= $esc(lex_adm_icon($e['loaded'] ? 'ok' : 'fail')) ?> <?= $esc($e['name']) ?></span>
+      <span class="badge <?= $esc(lex_adm_bool_badge($e['loaded'])) ?>"><?= $esc(lex_adm_icon($e['loaded'] ? 'ok' : 'fail')) ?> <?= $esc($e['name']) ?></span>
     <?php endforeach; ?></div>
     <p style="margin:0 0 6px;color:var(--fg-muted);font-size:12px">Полезные (опциональные драйверы)</p>
     <div class="chips"><?php foreach ((array) ($p['extensions']['useful'] ?? []) as $e): ?>

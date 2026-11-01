@@ -229,7 +229,8 @@ final class FileStorage implements FileStorageInterface
         // (\ => /), затем решаем jail — иначе корень «H:/...» ошибочно считается
         // относительным и normalize() прибивает к нему ведущий '/', ломая префикс.
         $path = self::canonicalize($path);
-        if ($path[0] === '/') {
+        if ($path[0] === '/' || self::isWindowsAbsolute($path)) {
+            // Абсолютный путь (unix «/...» или windows «H:/...») — резолвим как есть.
             $candidate = $path;
         } else {
             $candidate = $this->rootDir . '/' . $path;
@@ -301,6 +302,13 @@ final class FileStorage implements FileStorageInterface
         // Ведущий '/' только для unix-путей; «C:/...», «H:\...» — нет.
         $leadingSlash = str_starts_with($path, '/') && !self::isWindowsAbsolute($path);
         $body = $leadingSlash ? substr($path, 1) : $path;
+        // Windows-совместимость: ложный ведущий слэш перед диск-литерой
+        // («/H:/Server/...» — артефакт старых нормализаций на Windows) отрезается,
+        // иначе realpath()/jail-префикс разъезжаются и создаётся папка «/H:».
+        while ($leadingSlash && preg_match('#^/?([A-Za-z]:[/\\\\].*)$#', $body, $m) === 1) {
+            $leadingSlash = false;
+            $body = $m[1];
+        }
 
         $parts = [];
         foreach (explode('/', $body) as $seg) {

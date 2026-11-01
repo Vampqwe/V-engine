@@ -98,6 +98,11 @@ switch ($command) {
     case 'scheduler:run':
         $exitCode = runScheduler($kernel);
         break;
+    case 'migrate':
+    case 'migrate:status':
+    case 'migrate:rollback':
+        $exitCode = runMigration($kernel, $command, $args);
+        break;
     default:
         fwrite(STDERR, "Unknown command: {$command}\n");
         print_usage(2);
@@ -181,6 +186,60 @@ function registerSiteScheduledJobs(Kernel $kernel, SchedulerInterface $scheduler
             $registrar($kernel, $scheduler);
         }
     }
+}
+
+/**
+ * Команды миграций БД (P2). Файлы миграций сайта: sites/<домен>/storage/migrations/.
+ * migrate / migrate:status / migrate:rollback --steps=N
+ */
+function runMigration(Kernel $kernel, string $command, array $args): int
+{
+    /** @var \Core\Contract\DatabaseInterface $db */
+    $db = $kernel->get(\Core\Contract\DatabaseInterface::class);
+    if (!$db->isAvailable()) {
+        fwrite(STDERR, "Database not available for site (config/database.php enabled=false or no DSN).\n");
+        return 1;
+    }
+    /** @var ConfigInterface $config */
+    $config = $kernel->get(ConfigInterface::class);
+    $dir = rtrim((string) $config->get('engine.site_dir', ''), '/') . '/storage/migrations';
+    $runner = new \Core\Module\Migration\FileMigrationRunner($db, $dir);
+
+    switch ($command) {
+        case 'migrate':
+            $applied = $runner->migrate();
+            if ($applied === []) {
+                fwrite(STDOUT, "migrate: nothing pending\n");
+            } else {
+                foreach ($applied as $name) {
+                    fwrite(STDOUT, "migrated: {$name}\n");
+                }
+            }
+            return 0;
+        case 'migrate:status':
+            foreach ($runner->status() as $row) {
+                fwrite(STDOUT, sprintf("%-40s %s\n", $row['name'], $row['applied'] ? '[applied]' : '[pending]'));
+            }
+            fwrite(STDOUT, sprintf("pending=%d\n", $runner->pendingCount()));
+            return 0;
+        case 'migrate:rollback':
+            $steps = 1;
+            foreach ($args as $arg) {
+                if (str_starts_with($arg, '--steps=')) {
+                    $steps = max(1, (int) substr($arg, 8));
+                }
+            }
+            $reverted = $runner->rollback($steps);
+            if ($reverted === []) {
+                fwrite(STDOUT, "rollback: nothing to revert\n");
+            } else {
+                foreach ($reverted as $name) {
+                    fwrite(STDOUT, "reverted: {$name}\n");
+                }
+            }
+            return 0;
+    }
+    return 1;
 }
 
 function print_usage(int $code): never

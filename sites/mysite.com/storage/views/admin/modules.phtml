@@ -1,0 +1,23 @@
+<?php declare(strict_types=1); ?>
+<?php include __DIR__ . '/helpers.php'; ?>
+<?php include __DIR__ . '/layout.phtml'; ?>
+<h1 class="page-title">Модули</h1>
+<p class="page-sub">Реестр ядра: имя, версия, порядок загрузки (топологическая сортировка по зависимостям), предоставляемые контракты.</p>
+<div class="card">
+  <div class="card-h">Зарегистрированные модули <span class="hint"><?= $esc(lex_adm_int(count($stats['modules'] ?? []))) ?> шт</span></div>
+  <?php if (($stats['modules'] ?? []) === []): ?><div class="empty">Реестр пуст.</div><?php else: ?>
+  <table class="data">
+    <tr><th>#</th><th>Модуль</th><th>Версия</th><th>Предоставляет</th><th>Зависит от</th><th>Статус</th></tr>
+    <?php foreach ($stats['modules'] as $m): ?>
+    <tr>
+      <td style="color:var(--fg-muted)"><?= $esc((string) ($m['boot_order'] ?? '—')) ?></td>
+      <td><strong><?= $esc($m['name']) ?></strong></td>
+      <td class="mono"><?= $esc($m['version']) ?></td>
+      <td><div class="chips"><?php foreach ((array) $m['provides'] as $prov): ?><span class="badge info mono"><?= $esc($prov) ?></span><?php endforeach; ?></div></td>
+      <td><div class="chips"><?php foreach ((array) $m['dependencies'] as $d): ?><span class="badge muted mono"><?= $esc($d) ?></span><?php endforeach; ?></div></td>
+      <td><?php if (!empty($m['missing'])): ?><span class="badge fail">отсутствуют: <?= $esc(implode(', ', (array) $m['missing'])) ?></span><?php else: ?><span class="badge ok">зависимости удовлетворены</span><?php endif; ?></td>
+    </tr>
+    <?php endforeach; ?>
+  </table>
+  <?php endif; ?>
+</div>

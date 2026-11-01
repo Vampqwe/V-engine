@@ -121,6 +121,17 @@ final class PdoDatabase implements DatabaseInterface
         }
     }
 
+    public function run(string $sql, array $params = []): ?array
+    {
+        $pdo = $this->pdo();
+        $stmt = $pdo->prepare($sql);
+        $this->bindValues($stmt, $params);
+        $stmt->execute();
+
+        // SELECT-подобные запросы возвращают строки; DDL/DML — null.
+        return $stmt->columnCount() > 0 ? $stmt->fetchAll(\PDO::FETCH_ASSOC) : null;
+    }
+
     // =========================================================================
     // Internals
     // =========================================================================

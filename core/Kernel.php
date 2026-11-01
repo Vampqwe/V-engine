@@ -30,8 +30,12 @@ use Core\Module\Cache\CacheModule;
 use Core\Module\Config\ConfigModule;
 use Core\Module\Cookie\CookieModule;
 use Core\Module\Database\DatabaseModule;
+use Core\Module\DataPortability\DataPortabilityModule;
+use Core\Module\Doctor\DoctorModule;
+use Core\Module\FeatureFlag\FeatureFlagModule;
 use Core\Module\FileStorage\FileStorageModule;
 use Core\Module\FileUpload\FileUploadModule;
+use Core\Module\MaintenanceMode\MaintenanceModule;
 use Core\Module\Notification\NotificationModule;
 use Core\Module\Queue\QueueModule;
 use Core\Module\Scheduler\SchedulerModule;
@@ -76,6 +80,9 @@ final class Kernel implements KernelInterface
     /** @var MiddlewareInterface[] Глобальный middleware-слой (внешний — первым) */
     private array $globalMiddleware = [];
 
+    /** @var MiddlewareInterface[] Системный слой от модулей ядра (добавляется во время boot) */
+    private array $systemMiddleware = [];
+
     private bool $booted = false;
 
     /** @param ?ModuleInterface[] $systemModules null => стандартный P0+P1-набор */
@@ -114,6 +121,11 @@ final class Kernel implements KernelInterface
             new SchedulerModule(),    // SchedulerInterface (P2, cron-проход без демона)
             new NotificationModule(), // NotificationInterface (P2, log/smtp/mail без cURL)
             new AuditLogModule(),     // AuditLogInterface (P2, БД или append-only файл)
+            // --- P3 (§8.4): сервисные модули поверх готового ядра ---
+            new FeatureFlagModule(),        // FeatureFlagInterface (требует Config+FileStorage)
+            new MaintenanceModule(),        // MaintenanceModeInterface + системный middleware 503
+            new DataPortabilityModule(),    // DataPortabilityInterface (экспорт/импорт §8.4)
+            new DoctorModule(),             // Doctor: агрегатор HealthCheck — поднимается ПОСЛЕДНИМ
         ];
     }
 
@@ -214,6 +226,17 @@ final class Kernel implements KernelInterface
             throw new ContainerException('addMiddleware() must be called before boot().');
         }
         $this->globalMiddleware[] = $middleware;
+    }
+
+    /**
+     * Системный middleware от модуля ядра: добавляется во время boot()
+     * (из Module::boot), всегда идёт ПОСЛЕ пользовательских слоёв, но до
+     * диспатча маршрута. Пользовательские модули этот метод НЕ используют —
+     * для них есть addMiddleware() до boot().
+     */
+    public function addSystemMiddleware(MiddlewareInterface $middleware): void
+    {
+        $this->systemMiddleware[] = $middleware;
     }
 
     public function getRegistry(): Registry
@@ -328,8 +351,9 @@ final class Kernel implements KernelInterface
     {
         $request = $request->withRouteParams($result->params);
 
-        // Pipeline: глобальные слои снаружи, route-слои внутри (ближе к хендлеру).
-        $layers = array_merge($this->globalMiddleware, $this->resolveRouteMiddleware($result->middleware));
+        // Pipeline: глобальные слои снаружи, системные (модульные) — внутрь от них,
+        // route-слои ближе всех к хендлеру.
+        $layers = array_merge($this->globalMiddleware, $this->systemMiddleware, $this->resolveRouteMiddleware($result->middleware));
         $core = fn (RequestInterface $r): object => $this->invokeHandler($r, $result, $bus);
 
         $next = $core;
@@ -499,7 +523,7 @@ final class Kernel implements KernelInterface
         /** @var array<string, string> contract => provider name */
         $providers = [];
         foreach ($byName as $name => $module) {
-            foreach (self::providesOf($module) as $contract) {
+            foreach (self::providesOfPublic($module) as $contract) {
                 $providers[$contract] = $name;
             }
         }
@@ -544,7 +568,7 @@ final class Kernel implements KernelInterface
      *
      * @return string[]
      */
-    private static function providesOf(ModuleInterface $module): array
+    public static function providesOfPublic(ModuleInterface $module): array
     {
         if (method_exists($module, 'getProvides')) {
             /** @var string[] $explicit */

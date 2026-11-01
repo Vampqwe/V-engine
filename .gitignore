@@ -1,2 +1,11 @@
+.phpunit.cache/
 *.log
+
+# Данные рантайма сайтов (не коммитятся)
+/sites/*/storage/*.sqlite
+/sites/*/storage/logs/
+/sites/*/storage/cache/
+/sites/*/storage/sessions/
+/sites/*/storage/uploads/
+/sites/*/storage/queue/
 .phpunit.cache/

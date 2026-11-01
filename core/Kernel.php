@@ -43,6 +43,7 @@ use Core\Module\Scheduler\SchedulerModule;
 use Core\Module\Logger\LoggerModule;
 use Core\Module\Paginator\PaginatorModule;
 use Core\Module\Security\SecurityModule;
+use Core\Module\Session\NativeSession;
 use Core\Module\Session\SessionModule;
 use Core\Module\Validator\ValidatorModule;
 use Core\Module\View\ViewModule;

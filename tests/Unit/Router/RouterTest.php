@@ -55,6 +55,9 @@ final class RouterTest extends TestCase
     {
         $this->router->get('/news/{id:\d+}', static fn () => 'news');
         self::assertSame(RouteResult::NOT_FOUND, $this->router->resolve('GET', '/news/abc')->status);
+        // Путь существует для GET с валидным id → чужой метод даёт 405 (список из совпавшего шаблона)
+        self::assertSame(RouteResult::METHOD_NOT_ALLOWED, $this->router->resolve('POST', '/news/123')->status);
+        self::assertSame(['GET'], $this->router->resolve('POST', '/news/123')->allowedMethods);
         self::assertSame(RouteResult::FOUND, $this->router->resolve('GET', '/news/123')->status);
     }
 
@@ -94,7 +97,7 @@ final class RouterTest extends TestCase
 
         $result = $this->router->resolve('GET', '/form/5');
         self::assertSame(RouteResult::METHOD_NOT_ALLOWED, $result->status);
-        sort($result->allowedMethods);
+        // Список допустимых методов детерминирован (sort внутри RouteResult)
         self::assertSame(['PATCH', 'PUT'], $result->allowedMethods);
     }
 

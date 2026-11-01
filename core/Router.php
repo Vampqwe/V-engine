@@ -133,10 +133,10 @@ final class Router implements RouterInterface
      */
     private function addCompiled(string $method, string $pattern, callable $handler, array $middleware): void
     {
-        $normalized = Request::normalizePath($pattern);
-        if (!str_starts_with($normalized, '/')) {
+        if (!is_string($pattern) || $pattern === '' || !str_starts_with($pattern, '/')) {
             throw new EngineException(sprintf('Route pattern "%s" must start with "/".', $pattern));
         }
+        $normalized = Request::normalizePath($pattern);
 
         if (str_contains($normalized, '{')) {
             [$regex, $params] = self::compile($normalized);

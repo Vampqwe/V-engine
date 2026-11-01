@@ -60,10 +60,19 @@ final class Request implements RequestInterface
         return new self($method, self::normalizePath($path), $query, $post, $headers, [], []);
     }
 
+    /**
+     * Нормализация пути: decode → слэши → /segment/... (без хвостового слэша).
+     * Пустая строка остаётся пустой — строгую форму паттерна проверяет Router.
+     */
     public static function normalizePath(string $path): string
     {
-        $path = '/' . trim(rawurldecode($path), '/');
-        return $path === '/' ? '/' : rtrim($path, '/');
+        $decoded = rawurldecode($path);
+        $unified = str_replace('\\', '/', $decoded);
+        $segments = array_values(array_filter(explode('/', $unified), static fn ($s) => $s !== ''));
+        if ($segments === []) {
+            return $decoded === '' ? '' : '/';
+        }
+        return '/' . implode('/', $segments);
     }
 
     public function getMethod(): string

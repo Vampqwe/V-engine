@@ -47,6 +47,7 @@ final class RouteResult
     /** @param string[] $allowedMethods */
     public static function methodNotAllowed(array $allowedMethods): self
     {
+        sort($allowedMethods); // детерминированный список для заголовка Allow
         return new self(self::METHOD_NOT_ALLOWED, null, [], $allowedMethods);
     }
 

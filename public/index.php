@@ -100,12 +100,21 @@ try {
     /** @var \Core\Router $router */
     $router = $kernel->get(\Core\Contract\RouterInterface::class);
 
-    // 5.2. Маршруты сайта: sites/<домен>/bootstrap/routes.php; если файла нет
-    //      (например, у demo-сайта) — минимальные демо-маршруты ядра.
+    // 5.2. Системные маршруты ядра (/health): регистрируются ВСЕГДА — и до
+    //      bootstrap-файла сайта, чтобы пользовательский routes.php мог их
+    //      переопределить своим обработчиком. Админ-панель /admin/* поднята
+    //      системным модулем AdminModule ещё на boot() — она доступна на
+    //      любом хосте независимо от наличия routes.php (§16.8 «две дороги»).
+    register_core_routes($kernel, $router, $config);
+
+    // 5.3. Маршруты сайта: sites/<домен>/bootstrap/routes.php (необязателен).
     $withRoutes = $siteBootstrap('routes.php');
     if ($withRoutes !== null) {
         $withRoutes($kernel, $router);
     } else {
+        // Демо-главная — только для сайтов без собственного routes.php
+        // (иначе не перекроет пользовательский «GET /»: Router отдаёт первое
+        // точное совпадение, а дубликат регистрировать нельзя).
         register_demo_routes($kernel, $router, $config);
     }
 
@@ -127,6 +136,28 @@ $kernel->send($response);
 // 6. ДЕМО-МАРШРУТЫ (в реальном проекте маршруты регистрируют модули сайта;
 //    здесь — минимальный пример полного HTTP-цикла через контракты ядра)
 // ==============================================================================
+
+/**
+ * Системные маршруты ядра: доступны на ЛЮБОМ хосте и при ЛЮБОМ сайте,
+ * даже если sites/<домен>/bootstrap/routes.php отсутствует или не поднялся.
+ * Регистрация идёт ДО bootstrap сайта — сайт может переопределить их своим
+ * обработчиком (первое точное совпадение выигрывает в Router).
+ */
+function register_core_routes(Kernel $kernel, \Core\Router $router, ConfigInterface $config): void
+{
+    $router->get('/health', static function (RequestInterface $request) use ($kernel): Response {
+        $modules = [];
+        foreach ($kernel->getRegistry()->all() as $module) {
+            $modules[] = ['name' => $module->getName(), 'version' => $module->getVersion()];
+        }
+        return Response::json([
+            'status'  => 'ok',
+            'engine'  => Kernel::VERSION,
+            'modules' => $modules,
+        ]);
+    });
+}
+
 function register_demo_routes(Kernel $kernel, \Core\Router $router, ConfigInterface $config): void
 {
     $router->get('/', static function (RequestInterface $request) use ($kernel, $config): Response {
@@ -138,17 +169,5 @@ function register_demo_routes(Kernel $kernel, \Core\Router $router, ConfigInterf
             'version' => Kernel::VERSION,
         ]);
         return Response::html($html);
-    });
-
-    $router->get('/health', static function (RequestInterface $request) use ($kernel): Response {
-        $modules = [];
-        foreach ($kernel->getRegistry()->all() as $module) {
-            $modules[] = ['name' => $module->getName(), 'version' => $module->getVersion()];
-        }
-        return Response::json([
-            'status'  => 'ok',
-            'engine'  => Kernel::VERSION,
-            'modules' => $modules,
-        ]);
     });
 }

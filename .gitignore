@@ -1,1 +1,4 @@
-.phpunit.cache/
+sites/*/storage/sessions/
+sites/*/storage/views/
+sites/*/storage/maintenance.json
+*.log

@@ -48,8 +48,38 @@ final class Config implements ConfigInterface
                 $this->sections[$section] = array_replace_recursive($existing, $data);
             }
         }
+        // Слой 1: переменные окружения процесса (реальный ENV веб-сервера,
+        // корневой .env движка, переданный через public/index.php). Значимые
+        // (непустые) значения НЕ перекрываются файлом сайта — иначе APP_SECRET
+        // из process-env игнорировался бы и boot падал с SecurityException
+        // («APP_SECRET is missing»), что на хостинге выглядит как ошибка ядра.
+        $processVars = [];
+        foreach ([getenv(), $_ENV, $_SERVER] as $source) {
+            foreach ((array) $source as $name => $raw) {
+                if (!is_string($name) || !preg_match('/^[A-Z][A-Z0-9_]*$/', $name)) {
+                    continue; // отсеем HTTP_*, REQUEST_*, SCRIPT_FILENAME и прочий мусор
+                }
+                $value = is_scalar($raw) ? trim((string) $raw) : '';
+                if ($value !== '') {
+                    $processVars[$name] = $value;
+                }
+            }
+        }
+        $this->applyEnv($processVars);
+
+        // Слой 2: sites/<домен>/.env — заполняет только те ключи, которых нет
+        // в процессном окружении, либо их значение пустое (например APP_SECRET=
+        // в закоммиченном шаблоне).
         if ($this->envPath !== null && is_file($this->envPath)) {
-            $this->applyEnv($this->parseEnvFile($this->envPath));
+            $siteVars = [];
+            foreach ($this->parseEnvFile($this->envPath) as $name => $value) {
+                $normalized = strtolower(str_replace('_', '.', (string) $name));
+                if (array_key_exists($normalized, $this->overrides) && $this->overrides[$normalized] !== '') {
+                    continue; // процессный ENV важнее файла сайта
+                }
+                $siteVars[$name] = $value;
+            }
+            $this->applyEnv($siteVars);
         }
         return $this;
     }

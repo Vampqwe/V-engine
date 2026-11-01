@@ -45,7 +45,7 @@ final class SecurityModule implements ModuleInterface
         $secret = (string) ($config->get('app.secret') ?? '');
         if ($secret === '') {
             throw new SecurityException(
-                'APP_SECRET is missing in sites/' . $site->getBaseFolder() . '/.env. '
+                'APP_SECRET is missing in sites/<домен>/.env. '
                 . 'Generate it: php -r "echo bin2hex(random_bytes(32));"',
             );
         }

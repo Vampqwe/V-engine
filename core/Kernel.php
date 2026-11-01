@@ -346,6 +346,32 @@ final class Kernel implements KernelInterface
         }
 
         $bus->dispatch('onRequestEnd', ['request' => $request, 'response' => $response]);
+
+        // Сессия движка: если клиент ещё не знает свой SID (новый/битый cookie),
+        // ядро само выпускает Set-Cookie (HttpOnly+SameSite=Lax; Secure — на https).
+        // Иначе CSRF-токен, записанный в сессию при рендере, терялся бы на каждом
+        // запросе, и любое POST-действие падало бы с 500.
+        if (!$response->hasHeader('Set-Cookie')
+            && $this->container->has(SessionInterface::class)
+            && !$this->container->has(CookieInterface::class)) {
+            $session = $this->container->get(SessionInterface::class);
+            assert($session instanceof SessionInterface);
+            if ($session instanceof NativeSession && !$session->hasIncomingId()) {
+                $secure = str_starts_with((string) $this->container->get(SiteContextInterface::class)->getBaseUrl(), 'https://');
+                $parts = [
+                    $session->getCookieName() . '=' . $session->id(),
+                    'Path=/',
+                    'HttpOnly',
+                    'SameSite=Lax',
+                    'Max-Age=' . (int) ($this->container->get(ConfigInterface::class)->get('session.lifetime', 86400)),
+                ];
+                if ($secure) {
+                    $parts[] = 'Secure';
+                }
+                $response = $response->withHeader('Set-Cookie', implode('; ', $parts));
+            }
+        }
+
         return $response;
     }
 

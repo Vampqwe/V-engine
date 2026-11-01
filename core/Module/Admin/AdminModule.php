@@ -146,7 +146,10 @@ final class AdminModule implements ModuleInterface
         // --- Действия обслуживания (POST + CSRF, §9) --------------------------
         $router->post(self::PATH . '/actions/clear-cache', function (RequestInterface $request) use ($kernel, $security): Response {
             $this->guardDebug($kernel);
-            $this->assertCsrf($security, $request);
+            $denied = $this->assertCsrf($security, $request);
+            if ($denied !== null) {
+                return $denied;
+            }
             $container = $kernel->getContainer();
             if ($container->has(CacheInterface::class)) {
                 $cache = $container->get(CacheInterface::class);
@@ -158,7 +161,10 @@ final class AdminModule implements ModuleInterface
 
         $router->post(self::PATH . '/actions/maintenance/on', function (RequestInterface $request) use ($kernel, $security): Response {
             $this->guardDebug($kernel);
-            $this->assertCsrf($security, $request);
+            $denied = $this->assertCsrf($security, $request);
+            if ($denied !== null) {
+                return $denied;
+            }
             $container = $kernel->getContainer();
             if ($container->has(MaintenanceModeInterface::class)) {
                 $mm = $container->get(MaintenanceModeInterface::class);
@@ -171,7 +177,10 @@ final class AdminModule implements ModuleInterface
 
         $router->post(self::PATH . '/actions/maintenance/off', function (RequestInterface $request) use ($kernel, $security): Response {
             $this->guardDebug($kernel);
-            $this->assertCsrf($security, $request);
+            $denied = $this->assertCsrf($security, $request);
+            if ($denied !== null) {
+                return $denied;
+            }
             $container = $kernel->getContainer();
             if ($container->has(MaintenanceModeInterface::class)) {
                 $mm = $container->get(MaintenanceModeInterface::class);
@@ -204,12 +213,22 @@ final class AdminModule implements ModuleInterface
         }
     }
 
-    private function assertCsrf(SecurityInterface $security, RequestInterface $request): void
+    private function assertCsrf(SecurityInterface $security, RequestInterface $request): Response|null
     {
         $token = $request->getPost('_token') ?? $request->getHeader('X-CSRF-Token');
         if (!$security->validateCsrf(is_string($token) ? $token : null)) {
-            throw new EngineException('CSRF token mismatch — действие отклонено (§9).');
+            // 403 вместо «сырого» исключения: CSRF-ошибка — штатный отказ,
+            // а не сбой движка (500 reserved for crashes, §31).
+            return Response::html(
+                '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><title>403 · LEX</title></head>'
+                . '<body style="background:#0d1117;color:#e6edf3;font-family:sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center">'
+                . '<div style="text-align:center"><h1 style="color:#f85149">403</h1>'
+                . '<p>CSRF token mismatch — действие отклонено (§9).</p>'
+                . '<a href="/admin/" style="color:#1f6feb">← В админ-панель</a></div></body></html>',
+                403,
+            );
         }
+        return null;
     }
 
     private function redirectWithFlash(KernelInterface $kernel, string $message): Response

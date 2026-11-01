@@ -88,7 +88,9 @@ final class SessionModule implements ModuleInterface
                 $store = $fileStore;
             }
 
-            return new NativeSession($store, $incoming);
+            $session = new NativeSession($store, $incoming);
+            $session->setCookieName($cookieName);
+            return $session;
         };
 
         $container->protect(SessionInterface::class, $factory);

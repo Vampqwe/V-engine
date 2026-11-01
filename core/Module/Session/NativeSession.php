@@ -30,6 +30,9 @@ final class NativeSession implements SessionInterface
 
     private bool $incomingValid;
 
+    /** Имя cookie, в котором живёт SID (нужно слою ответа для Set-Cookie). */
+    private string $cookieName = 'VENGINE_SID';
+
     public function __construct(
         private readonly SessionStoreInterface $store,
         ?string $incomingId = null,
@@ -37,6 +40,18 @@ final class NativeSession implements SessionInterface
         $this->incomingValid = $incomingId !== null && preg_match(self::ID_PATTERN, $incomingId) === 1;
         // Битый/отсутствующий cookie => новый сид; старый мусор не попадает в хранилище.
         $this->sid = $this->incomingValid ? $incomingId : bin2hex(random_bytes(16));
+    }
+
+    /** Установить имя cookie сессии (вызывается SessionModule при создании). */
+    public function setCookieName(string $name): void
+    {
+        $this->cookieName = $name;
+    }
+
+    /** Имя cookie, в котором клиент должен получать SID. */
+    public function getCookieName(): string
+    {
+        return $this->cookieName;
     }
 
     // =========================================================================

@@ -21,6 +21,13 @@ interface DatabaseInterface
 
     public function transaction(callable $callback): mixed;
 
+    /**
+     * Выполнить произвольный SQL (только prepared statements, §5).
+     * Нужен миграциям (DDL) и служебным запросам. Возвращает rows для SELECT,
+     * иначе null. Бросает DatabaseException при недоступной БД/ошибке.
+     */
+    public function run(string $sql, array $params = []): ?array;
+
     /** Активна ли БД (конфиг + коннект). Для HealthCheck и graceful degradation. */
     public function isAvailable(): bool;
 }

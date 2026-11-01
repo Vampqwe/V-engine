@@ -25,11 +25,16 @@ use Core\Contract\CacheInterface;
 use Core\Exception\ContainerException;
 use Closure;
 use Core\Exception\EngineException;
+use Core\Module\AuditLog\AuditLogModule;
 use Core\Module\Cache\CacheModule;
 use Core\Module\Config\ConfigModule;
 use Core\Module\Cookie\CookieModule;
 use Core\Module\Database\DatabaseModule;
 use Core\Module\FileStorage\FileStorageModule;
+use Core\Module\FileUpload\FileUploadModule;
+use Core\Module\Notification\NotificationModule;
+use Core\Module\Queue\QueueModule;
+use Core\Module\Scheduler\SchedulerModule;
 use Core\Module\Logger\LoggerModule;
 use Core\Module\Paginator\PaginatorModule;
 use Core\Module\Security\SecurityModule;
@@ -104,6 +109,11 @@ final class Kernel implements KernelInterface
             new CacheModule(),        // CacheInterface
             new ValidatorModule(),    // ValidatorInterface
             new PaginatorModule(),    // PaginatorInterface
+            new FileUploadModule(),   // FileUploadInterface (P2, требует Config+FileStorage)
+            new QueueModule(),        // QueueInterface (P2, файловая очередь в jailed-root)
+            new SchedulerModule(),    // SchedulerInterface (P2, cron-проход без демона)
+            new NotificationModule(), // NotificationInterface (P2, log/smtp/mail без cURL)
+            new AuditLogModule(),     // AuditLogInterface (P2, БД или append-only файл)
         ];
     }
 
@@ -197,9 +207,12 @@ final class Kernel implements KernelInterface
     // Middleware / Registry (ШАГ 3)
     // =========================================================================
 
-    /** Добавить глобальный middleware-слой (вызывается до boot или сразу после). */
+    /** Добавить глобальный middleware-слой (до boot() или сразу после). */
     public function addMiddleware(MiddlewareInterface $middleware): void
     {
+        if ($this->booted) {
+            throw new ContainerException('addMiddleware() must be called before boot().');
+        }
         $this->globalMiddleware[] = $middleware;
     }
 
@@ -281,7 +294,11 @@ final class Kernel implements KernelInterface
             $bus->dispatch('onRequestStart', ['request' => $request]);
 
             $result = $this->router->resolve($request->getMethod(), $request->getPath());
-            $bus->dispatch('onRouteResolved', ['request' => $request, 'result' => $result]);
+            $bus->dispatch('onRouteResolved', [
+                'request' => $request,
+                'result'  => $result,
+                'status'  => $result->status,
+            ]);
 
             $response = match ($result->status) {
                 RouteResult::FOUND => $this->handleFound($request, $result, $bus, $logger),

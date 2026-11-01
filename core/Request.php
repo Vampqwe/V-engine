@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Core;
 
 use Core\Contract\RequestInterface;
+use Core\Contract\UploadedFile;
 
 /**
  * Значение-обёртка входного HTTP-запроса (ШАГ 3).
@@ -18,6 +19,7 @@ final class Request implements RequestInterface
      * @param array<string, string> $headers Ключи в нижнем регистре.
      * @param array<string, mixed> $attributes
      * @param array<string, string> $routeParams
+     * @param array<string, UploadedFile> $files Нормализованные DTO загрузки
      */
     private function __construct(
         private readonly string $method,
@@ -27,6 +29,7 @@ final class Request implements RequestInterface
         private readonly array $headers,
         private array $attributes,
         private array $routeParams,
+        private readonly array $files = [],
     ) {
     }
 
@@ -38,7 +41,12 @@ final class Request implements RequestInterface
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
      */
-    public static function fromServer(array $server, array $query = [], array $post = []): self
+    /**
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $post
+     * @param array<string, array<string, mixed>> $files сырой $_FILES-массив (нормализуется в DTO)
+     */
+    public static function fromServer(array $server, array $query = [], array $post = [], array $files = []): self
     {
         $method = strtoupper(trim((string) ($server['REQUEST_METHOD'] ?? 'GET'))) ?: 'GET';
 
@@ -57,7 +65,66 @@ final class Request implements RequestInterface
             $headers['content-type'] = (string) $server['CONTENT_TYPE'];
         }
 
-        return new self($method, self::normalizePath($path), $query, $post, $headers, [], []);
+        return new self($method, self::normalizePath($path), $query, $post, $headers, [], [], self::normalizeFiles($files));
+    }
+
+    /**
+     * Нормализация $_FILES в карту DTO. Поддержка множественных полей
+     * (input name="docs[]") — каждый элемент становится отдельным UploadedFile
+     * с ключом "field[0]", "field[1]" и т.д.; одиночный файл — ключ "field".
+     *
+     * @param array<string, mixed> $raw
+     * @return array<string, UploadedFile>
+     */
+    public static function normalizeFiles(array $raw): array
+    {
+        $result = [];
+        foreach ($raw as $field => $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            // Множественное поле: name/type/tmp_name/error/size — массивы.
+            if (is_array($entry['name'] ?? null)) {
+                $count = count($entry['name']);
+                for ($i = 0; $i < $count; $i++) {
+                    $spec = [
+                        'name'     => (string) ($entry['name'][$i] ?? ''),
+                        'type'     => (string) ($entry['type'][$i] ?? 'application/octet-stream'),
+                        'tmp_name' => (string) ($entry['tmp_name'][$i] ?? ''),
+                        'error'    => (int) ($entry['error'][$i] ?? UPLOAD_ERR_NO_FILE),
+                        'size'     => (int) ($entry['size'][$i] ?? 0),
+                    ];
+                    if ($spec['name'] === '' && $spec['error'] === UPLOAD_ERR_NO_FILE) {
+                        continue; // пустой слот формы
+                    }
+                    $result[$field . '[' . $i . ']'] = UploadedFile::fromFilesArray($spec);
+                }
+                continue;
+            }
+            $result[(string) $field] = UploadedFile::fromFilesArray([
+                'name'     => (string) ($entry['name'] ?? ''),
+                'type'     => (string) ($entry['type'] ?? 'application/octet-stream'),
+                'tmp_name' => (string) ($entry['tmp_name'] ?? ''),
+                'error'    => (int) ($entry['error'] ?? UPLOAD_ERR_NO_FILE),
+                'size'     => (int) ($entry['size'] ?? 0),
+            ]);
+        }
+        return $result;
+    }
+
+    /**
+     * DTO загруженного файла по имени поля (или 'field[index]' для множественных).
+     * Реализация RequestInterface::getUploadedFile().
+     */
+    public function getUploadedFile(string $field): ?UploadedFile
+    {
+        return $this->files[$field] ?? null;
+    }
+
+    /** @return array<string, UploadedFile> все файлы запроса */
+    public function getUploadedFiles(): array
+    {
+        return $this->files;
     }
 
     /**

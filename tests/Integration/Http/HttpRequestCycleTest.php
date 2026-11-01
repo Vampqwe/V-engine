@@ -49,10 +49,14 @@ final class HttpRequestCycleTest extends TestCase
         exec('rm -rf ' . escapeshellarg($this->engineRoot));
     }
 
-    private function makeBootedKernel(callable ...$configure): Kernel
+    private function makeBootedKernel(bool $debug = false, callable ...$configure): Kernel
     {
         // CLI/тесты: домен задаётся через env SITE_DOMAIN (принятая модель
         // многосайтовости: SITE_URL/SITE_DOMAIN -> sites/<домен>).
+        file_put_contents(
+            $this->engineRoot . '/sites/example.test/config/core.php',
+            "<?php\ndeclare(strict_types=1);\nreturn ['timezone' => 'UTC', 'debug' => " . ($debug ? 'true' : 'false') . '];',
+        );
         $kernel = new Kernel($this->engineRoot, [
             new ConfigModule(),
             new FileStorageModule(),
@@ -144,7 +148,7 @@ final class HttpRequestCycleTest extends TestCase
 
     public function testUnsupportedHandlerReturnIsLoggedAsError(): void
     {
-        $kernel = $this->makeBootedKernel();
+        $kernel = $this->makeBootedKernel(true);
         $response = $kernel->run($this->request('GET', '/bad-return'));
 
         self::assertSame(500, $response->getStatusCode());
@@ -153,7 +157,7 @@ final class HttpRequestCycleTest extends TestCase
 
     public function testGlobalMiddlewareWrapsResponse(): void
     {
-        $kernel = $this->makeBootedKernel(static function (Kernel $k): void {
+        $kernel = $this->makeBootedKernel(false, static function (Kernel $k): void {
             $k->addMiddleware(new HeaderMiddleware('global'));
         });
         $response = $kernel->run($this->request('GET', '/'));
@@ -162,10 +166,11 @@ final class HttpRequestCycleTest extends TestCase
 
     public function testRouteMiddlewareResolvedFromContainer(): void
     {
-        $kernel = $this->makeBootedKernel(static function (Kernel $k): void {
-            $k->getContainer()->set('fixture.mw', static fn () => new HeaderMiddleware('route'));
+        $kernel = $this->makeBootedKernel(false, static function (Kernel $k): void {
             $k->addMiddleware(new HeaderMiddleware('global'));
         });
+        // route-middleware регистрируется в контейнер после boot() (модуль сайта)
+        $kernel->getContainer()->set('fixture.mw', static fn () => new HeaderMiddleware('route'));
         $response = $kernel->run($this->request('POST', '/form'));
 
         self::assertSame(200, $response->getStatusCode());
@@ -176,7 +181,7 @@ final class HttpRequestCycleTest extends TestCase
 
     public function testUnregisteredRouteMiddlewareYields500(): void
     {
-        $kernel = $this->makeBootedKernel();
+        $kernel = $this->makeBootedKernel(true);
         $response = $kernel->run($this->request('POST', '/form'));
         self::assertSame(500, $response->getStatusCode());
         self::assertStringContainsString('Middleware service "fixture.mw" is not registered', $response->getBody());
@@ -198,6 +203,10 @@ final class HttpRequestCycleTest extends TestCase
             [],
         );
         $kernel->boot();
+        // Request попадает в контейнер только внутри run() (§16.9) — до запроса
+        // его там нет; после прогона цикла сервис доступен модулям.
+        self::assertFalse($kernel->getContainer()->has(RequestInterface::class));
+        $kernel->run(Request::fromServer(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/']));
         $request = $kernel->get(RequestInterface::class);
         self::assertInstanceOf(RequestInterface::class, $request);
         self::assertSame('GET', $request->getMethod());

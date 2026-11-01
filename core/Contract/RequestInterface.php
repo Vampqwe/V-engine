@@ -32,4 +32,10 @@ interface RequestInterface
 
     /** @return array<string, mixed> Параметры маршрута из плейсхолдеров {id}. */
     public function getRouteParams(): array;
+
+    /** DTO загруженного файла по имени поля; null если поля нет (FileUpload P2). */
+    public function getUploadedFile(string $field): ?UploadedFile;
+
+    /** @return array<string, UploadedFile> Все файлы запроса (ключ — имя поля или field[i]). */
+    public function getUploadedFiles(): array;
 }

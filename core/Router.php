@@ -136,7 +136,9 @@ final class Router implements RouterInterface
         if (!is_string($pattern) || $pattern === '' || !str_starts_with($pattern, '/')) {
             throw new EngineException(sprintf('Route pattern "%s" must start with "/".', $pattern));
         }
-        $normalized = Request::normalizePath($pattern);
+        // Паттерн НЕ декодируется из URL-encoding: он содержит regex-ограничителей (\d+ и т.п.),
+        // которые rawurldecode() иначе уничтожит (%5Cd -> \d на входе, обратное искажение при round-trip).
+        $normalized = self::normalizePattern($pattern);
 
         if (str_contains($normalized, '{')) {
             [$regex, $params] = self::compile($normalized);
@@ -158,6 +160,20 @@ final class Router implements RouterInterface
             $this->exactIndex[$method . '|' . $normalized] = true;
             $this->exactRoutes[$normalized][] = $method . '#' . $index;
         }
+    }
+
+    /**
+     * Нормализация паттерна маршрута (без URL-decode — см. комментарий в addCompiled).
+     * ВАЖНО: обратный слэш НЕ заменяется — он является частью regex-ограничителей
+     * ({id:\d+}, {path:[a-z\/]+} и т.п.). Только схлопывание двойных прямых слэшей
+     * и удаление хвостового слэша.
+     */
+    private static function normalizePattern(string $pattern): string
+    {
+        $unified = preg_replace('#/+#', '/', $pattern) ?? $pattern;
+        $trimmed = rtrim($unified, '/');
+        // Корневой путь '/' должен остаться '/' (rtrim превратил бы его в пустую строку).
+        return $trimmed === '' ? '/' : $trimmed;
     }
 
     /**

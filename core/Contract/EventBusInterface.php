@@ -11,13 +11,29 @@ namespace Core\Contract;
  */
 interface EventBusInterface
 {
-    /** Зарегистрировать слушателя события. */
+    /** Зарегистрировать слушателя события (больше priority — раньше выполняется). */
     public function listen(string $event, callable $listener, int $priority = 0): void;
 
+    /** Снять все слушатели события (используется ядром при teardown/тестах). */
+    public function removeListeners(string $event): void;
+
+    /** Есть ли хотя бы один слушатель у события? */
+    public function hasListeners(string $event): bool;
+
     /**
-     *Dispatch события слушателям (триггерить могут только системные компоненты ядра, §17).
+     * Dispatch события слушателям. Триггерить события ядра вправе ТОЛЬКО
+     * системные компоненты (§18): публичный API-метод назван dispatch(), а не
+     * trigger() — пользовательский код обязан проходить через контракты ядра,
+     * подмена событий запрещена детекторами Lex.
      *
-     * @return array<string, mixed> Накопленные результаты слушателей.
+     * Ошибка одного слушателя не останавливает цепочку: она логируется и
+     * попадает в результат.
+     *
+     * @param array<string, mixed> $payload Передаётся каждому слушателю.
+     *
+     * @return array{results: array<int|string, mixed>, errors: array<int, string>}
+     *         results — возвраты слушателей (ключ: event:priority:index),
+     *         errors — сообщения Throwable слушателей.
      */
     public function dispatch(string $event, array $payload = []): array;
 }

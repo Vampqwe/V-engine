@@ -197,9 +197,12 @@ final class Kernel implements KernelInterface
     // Middleware / Registry (ШАГ 3)
     // =========================================================================
 
-    /** Добавить глобальный middleware-слой (вызывается до boot или сразу после). */
+    /** Добавить глобальный middleware-слой (до boot() или сразу после). */
     public function addMiddleware(MiddlewareInterface $middleware): void
     {
+        if ($this->booted) {
+            throw new ContainerException('addMiddleware() must be called before boot().');
+        }
         $this->globalMiddleware[] = $middleware;
     }
 
@@ -281,7 +284,11 @@ final class Kernel implements KernelInterface
             $bus->dispatch('onRequestStart', ['request' => $request]);
 
             $result = $this->router->resolve($request->getMethod(), $request->getPath());
-            $bus->dispatch('onRouteResolved', ['request' => $request, 'result' => $result]);
+            $bus->dispatch('onRouteResolved', [
+                'request' => $request,
+                'result'  => $result,
+                'status'  => $result->status,
+            ]);
 
             $response = match ($result->status) {
                 RouteResult::FOUND => $this->handleFound($request, $result, $bus, $logger),

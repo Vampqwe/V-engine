@@ -30,3 +30,16 @@
 {"ts":"2026-11-01T10:48:01+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
 {"ts":"2026-11-01T10:48:01+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
 {"ts":"2026-11-01T10:48:01+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:50:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:50:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:50:32+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:22+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:22+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:22+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:31+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:31+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:31+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:36+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:36+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:36+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T10:51:36+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}

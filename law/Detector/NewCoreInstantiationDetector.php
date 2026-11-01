@@ -8,7 +8,7 @@ use Law\ValueObject\Violation;
 
 /**
  * Детектор C-011: Запрещает прямое создание объектов ядра (new \Core\...)
- * в пользовательском пространстве (public/*/module/).
+ * в пользовательском пространстве (public/{...}/module/).
  */
 final class NewCoreInstantiationDetector implements DetectorInterface
 {
@@ -67,7 +67,7 @@ final class NewCoreInstantiationDetector implements DetectorInterface
 
     /**
      * Проверяет, находится ли файл в пользовательском пространстве.
-     * Пользовательское пространство: public/*/module/
+     * Пользовательское пространство: public/{site}/module/
      */
     private function isUserSpace(string $filePath): bool
     {

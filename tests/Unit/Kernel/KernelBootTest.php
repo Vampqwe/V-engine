@@ -43,7 +43,7 @@ final class KernelBootTest extends TestCase
         );
         file_put_contents(
             $this->engineRoot . '/sites/example.test/.env',
-            "SITE_URL=https://example.test\nCORE_DEBUG=true\n",
+            "SITE_URL=https://example.test\nCORE_DEBUG=true\nAPP_SECRET=test-secret-0123456789abcdef\n",
         );
     }
 

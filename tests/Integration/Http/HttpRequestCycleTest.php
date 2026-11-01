@@ -51,11 +51,13 @@ final class HttpRequestCycleTest extends TestCase
 
     private function makeBootedKernel(callable ...$configure): Kernel
     {
+        // CLI/тесты: домен задаётся через env SITE_DOMAIN (принятая модель
+        // многосайтовости: SITE_URL/SITE_DOMAIN -> sites/<домен>).
         $kernel = new Kernel($this->engineRoot, [
             new ConfigModule(),
             new FileStorageModule(),
             new LoggerModule(),
-        ], [], []);
+        ], [], ['SITE_DOMAIN' => 'example.test']);
         $kernel->addUserModule(new RouteRegisteringModule());
         foreach ($configure as $fn) {
             $fn($kernel);
@@ -182,7 +184,7 @@ final class HttpRequestCycleTest extends TestCase
 
     public function testRunBeforeBootRejected(): void
     {
-        $kernel = new Kernel($this->engineRoot, null, [], []);
+        $kernel = new Kernel($this->engineRoot, null, [], ['SITE_DOMAIN' => 'example.test']);
         $this->expectException(ContainerException::class);
         $kernel->run($this->request('GET', '/'));
     }

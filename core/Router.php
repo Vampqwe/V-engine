@@ -33,6 +33,14 @@ final class Router implements RouterInterface
     /** @var array<string, array<int, string>> exact path => keys в $routes */
     private array $exactRoutes = [];
 
+    /**
+     * Маршруты-префиксы (зарегистрированы с хвостовым слэшем, например
+     * «/admin/»): канонический путь без слэша («/admin») тоже обязан их
+     * находить — иначе запросы вида /admin отдают 404 вместо панели.
+     * @var array<string, string> нормализованный без-слэша путь => полный путь
+     */
+    private array $trailingSlashAliases = [];
+
     public function add(string $method, string $pattern, callable $handler, array $middleware = []): void
     {
         $method = strtoupper(trim($method));
@@ -87,6 +95,14 @@ final class Router implements RouterInterface
     {
         $method = strtoupper(trim($method)) ?: 'GET';
         $path = Request::normalizePath($path);
+
+        // 0. Алиас хвостового слэша: «/admin» <=> «/admin/». Паттерны нормализуются
+        //    rtrim('/') (см. normalizePattern), поэтому маршрут, зарегистрированный
+        //    как «/admin/», хранится под «/admin» и обязан отвечать на оба URL —
+        //    иначе админ-панель ядра на пути /admin отдаёт 404 на любом хосте.
+        if (!isset($this->exactIndex[$method . '|' . $path]) && isset($this->trailingSlashAliases[$path])) {
+            $path = $this->trailingSlashAliases[$path];
+        }
 
         // 1. Точные совпадения — быстрее и детерминированнее regex.
         $key = $method . '|' . $path;
@@ -180,6 +196,11 @@ final class Router implements RouterInterface
         if ($regex === null) {
             $this->exactIndex[$method . '|' . $normalized] = true;
             $this->exactRoutes[$normalized][] = $method . '#' . $index;
+            // Алиас хвостового слэша: «/admin/» (как в URL админ-панели) должен
+            // попадать на тот же точный маршрут, независимо от раскладки URL.
+            if (!isset($this->trailingSlashAliases[$normalized]) && $normalized !== '/') {
+                $this->trailingSlashAliases[$normalized] = $normalized . '/';
+            }
         }
     }
 

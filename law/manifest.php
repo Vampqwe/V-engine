@@ -38,6 +38,14 @@ return [
             'detector' => 'DirectFileLogDetector',
             'message' => 'Обнаружен прямой вызов file_put_contents или fopen для логов',
             'hint' => 'Используйте LoggerInterface::channel("name")'
+        ],
+        'C-040' => [
+            'article' => '§40. Безопасный вывод в шаблонах',
+            'scope' => 'USER',
+            'severity' => 'FAIL',
+            'detector' => 'UnsafeOutputDetector',
+            'message' => 'Небезопасный вывод <?= без экранирования в .phtml-шаблоне',
+            'hint' => 'Используйте <?= $esc($var) ?> (шорткат Security::escapeHtml)'
         ]
     ]
 ];

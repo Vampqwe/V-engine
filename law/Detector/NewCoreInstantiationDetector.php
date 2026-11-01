@@ -67,15 +67,20 @@ final class NewCoreInstantiationDetector implements DetectorInterface
 
     /**
      * Проверяет, находится ли файл в пользовательском пространстве.
-     * Пользовательское пространство: public/{site}/module/
+     * Пользовательское пространство — ВСЁ вне core/ и law/: сайты, точка входа, конфиги.
      */
     private function isUserSpace(string $filePath): bool
     {
         // Нормализуем пути для кроссплатформенности
         $normalizedPath = str_replace('\\', '/', $filePath);
-        
-        // Паттерн: public/любая_папка/module/
-        return (bool) preg_match('#/public/[^/]+/module/#', $normalizedPath);
+
+        // Системные пространства движка — не пользовательские (§7/§11)
+        if (preg_match('#(^|/)(core|law|vendor)/#', $normalizedPath) === 1) {
+            return false;
+        }
+
+        // Под надзором: сайты (sites/, legacy public/{site}/), точка входа, конфиги
+        return (bool) preg_match('#(^|/)(sites|public|config|bin)(/|$)#', $normalizedPath);
     }
 
     /**

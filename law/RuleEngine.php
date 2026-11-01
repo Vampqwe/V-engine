@@ -23,13 +23,17 @@ final class RuleEngine
     }
 
     private function registerDetectors(): void
-	{
-		$this->detectors = [
-			'C-009' => new Detector\StrictTypesDetector(),
-			'C-011' => new Detector\NewCoreInstantiationDetector(), // ← ДОБАВЛЕНО
-			// Сюда будут добавляться: 'C-031' => new Detector\DirectFileLogDetector(), и т.д.
-		];
-	}
+    {
+        // Реестр детекторов Конституционного Суда. Каждый детектор регистрируется
+        // под своим ruleId; манифест (law/manifest.php) остаётся источником метаданных.
+        $this->detectors = [
+            'C-001' => new Detector\EmergencyBunkerDetector(),
+            'C-009' => new Detector\StrictTypesDetector(),
+            'C-011' => new Detector\NewCoreInstantiationDetector(),
+            'C-031' => new Detector\DirectFileLogDetector(),
+            'C-040' => new Detector\UnsafeOutputDetector(),
+        ];
+    }
 
     /**
      * Запускает проверку всей кодовой базы.
@@ -39,7 +43,8 @@ final class RuleEngine
     public function run(string $rootPath): array
     {
         $violations = [];
-        $directoriesToScan = ['core', 'public', 'config', 'law'];
+        // §7: пользовательское пространство сайтов тоже под надзором Закона
+        $directoriesToScan = ['core', 'public', 'config', 'law', 'sites'];
 
         foreach ($directoriesToScan as $dir) {
             $fullDir = $rootPath . DIRECTORY_SEPARATOR . $dir;
@@ -49,17 +54,20 @@ final class RuleEngine
                 new RecursiveDirectoryIterator($fullDir, RecursiveDirectoryIterator::SKIP_DOTS)
             );
 
-            foreach ($iterator as $file) {
-                if ($file->isFile() && $file->getExtension() === 'php') {
-                    $filePath = $file->getRealPath();
-                    $content = file_get_contents($filePath);
+        foreach ($iterator as $file) {
+            if (!$file->isFile()) continue;
+            $ext = $file->getExtension();
+            // .php — все правила; .phtml — правила для шаблонов (C-040)
+            if ($ext !== 'php' && $ext !== 'phtml') continue;
 
-                    $violations = array_merge(
-                        $violations,
-                        $this->checkFile($filePath, $content)
-                    );
-                }
-            }
+            $filePath = $file->getRealPath();
+            $content = file_get_contents($filePath);
+
+            $violations = array_merge(
+                $violations,
+                $this->checkFile($filePath, $content)
+            );
+        }
         }
 
         return $violations;

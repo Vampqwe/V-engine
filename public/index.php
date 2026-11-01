@@ -60,6 +60,10 @@ if (is_file($rootEnvPath)) {
         $engineEnv = []; // повреждённый корневой .env не должен ронять люк
     }
 }
+// Корневые значения — только ДЕФОЛТЫ режима движка. Привязка сайта к папке
+// (ИМЯ ПАПКИ = ДОМЕН) идёт по HTTP_HOST; SITE_URL из корневого .env НЕ должен
+// перекрывать виртуальный хост (иначе многосайтовость ломается).
+unset($engineEnv['SITE_URL']);
 foreach ($engineEnv as $key => $value) {
     if (is_string($key) && getenv($key) === false) {
         putenv($key . '=' . (string) $value);
@@ -72,6 +76,23 @@ foreach ($engineEnv as $key => $value) {
 // ==============================================================================
 try {
     $kernel = new Kernel(ENGINE_BASE_PATH, null, $_SERVER, $engineEnv);
+
+    // 5.1. Контекст сайта известен ДО boot(): загружаем bootstrap сайта —
+    //      пользовательские модули (до boot) и маршруты (после boot, §16.9).
+    $siteCtx = \Core\SiteContext::detect(ENGINE_BASE_PATH, $_SERVER, $engineEnv);
+    $siteBootstrap = static function (string $name) use ($siteCtx): ?\Closure {
+        $file = $siteCtx->getBaseFolder() . '/bootstrap/' . $name;
+        if (!is_file($file)) {
+            return null;
+        }
+        $callable = require $file;
+        return is_callable($callable) ? \Closure::fromCallable($callable) : null;
+    };
+
+    if (($withModules = $siteBootstrap('modules.php')) !== null) {
+        $withModules($kernel);   // до boot(): addUserModule(...)
+    }
+
     $kernel->boot();
 
     /** @var ConfigInterface $config */
@@ -79,7 +100,14 @@ try {
     /** @var \Core\Router $router */
     $router = $kernel->get(\Core\Contract\RouterInterface::class);
 
-    register_demo_routes($kernel, $router, $config);
+    // 5.2. Маршруты сайта: sites/<домен>/bootstrap/routes.php; если файла нет
+    //      (например, у demo-сайта) — минимальные демо-маршруты ядра.
+    $withRoutes = $siteBootstrap('routes.php');
+    if ($withRoutes !== null) {
+        $withRoutes($kernel, $router);
+    } else {
+        register_demo_routes($kernel, $router, $config);
+    }
 
     $request = Request::fromServer($_SERVER, $_GET, $_POST, $_FILES);
     $response = $kernel->run($request);

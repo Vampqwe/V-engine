@@ -61,6 +61,8 @@ final class EntryPointTest extends TestCase
             'ignore_errors' => true,          // тело 4xx/5xx тоже читаем
             'timeout'       => 10,
             'follow_location' => 0,
+            // Виртуальный хост: привязка домен => папка сайта (многосайтовость).
+            'header'        => "Host: demo.localhost\r\n",
         ]]);
         $body = @file_get_contents($url, false, $context);
         $code = 0;

@@ -12,28 +12,36 @@ final class MailNotifierTest extends TestCase
     /** @param list<array{channel:string,message:string,context:array}> $logged */
     private function spyLogger(array &$logged): LoggerInterface
     {
-        return new class ($logged) implements LoggerInterface {
+        return new class ($logged, 'notification') implements LoggerInterface {
             /** @param list<array{channel:string,message:string,context:array}> $ref */
-            public function __construct(private array &$ref)
+            public function __construct(private array &$ref, private string $chan = 'app')
             {
             }
 
-            public function log(string $level, string $message, array $context = [], string $channel = 'app'): void
+            public function channel(string $name): LoggerInterface
             {
-                $this->ref[] = ['channel' => $channel, 'message' => $message, 'context' => $context];
+                return new self($this->ref, $name);
             }
 
-            public function emergency(string $message, array $context = [], string $channel = 'app'): void {}
-            public function alert(string $message, array $context = [], string $channel = 'app'): void {}
-            public function critical(string $message, array $context = [], string $channel = 'app'): void {}
-            public function error(string $message, array $context = [], string $channel = 'app'): void {}
-            public function warning(string $message, array $context = [], string $channel = 'app'): void {}
-            public function notice(string $message, array $context = [], string $channel = 'app'): void {}
-            public function info(string $message, array $context = [], string $channel = 'app'): void
+            public function info(string $message, array $context = []): void
             {
-                $this->log('INFO', $message, $context, $channel);
+                $this->ref[] = ['channel' => $this->chan, 'message' => $message, 'context' => $context];
             }
-            public function debug(string $message, array $context = [], string $channel = 'app'): void {}
+
+            public function warning(string $message, array $context = []): void
+            {
+                $this->info($message, $context);
+            }
+
+            public function error(string $message, array $context = []): void
+            {
+                $this->info($message, $context);
+            }
+
+            public function critical(string $message, array $context = []): void
+            {
+                $this->info($message, $context);
+            }
         };
     }
 

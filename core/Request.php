@@ -38,7 +38,12 @@ final class Request implements RequestInterface
      * @param array<string, mixed> $query
      * @param array<string, mixed> $post
      */
-    public static function fromServer(array $server, array $query = [], array $post = []): self
+    /**
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $post
+     * @param array<string, array<string, mixed>> $files сырой $_FILES-массив (нормализуется в DTO)
+     */
+    public static function fromServer(array $server, array $query = [], array $post = [], array $files = []): self
     {
         $method = strtoupper(trim((string) ($server['REQUEST_METHOD'] ?? 'GET'))) ?: 'GET';
 

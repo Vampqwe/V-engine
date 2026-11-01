@@ -17,8 +17,9 @@ interface SchedulerInterface
      * Зарегистрировать периодическую задачу.
      *
      * @param string $name   Уникальное имя.
-     * @param string $cron   Упрощённое выражение: "*/5 * * * *" (min hour day month weekday),
-     *                       поддерживаются числа, списки "1,2", диапазоны "1-5", шаги "star/5".
+     * @param string $cron   Упрощённое выражение: "* /5 * * * *" (без пробела после звёздочки —
+     *                       min hour day month weekday; поддерживаются числа, списки "1,2",
+     *                       диапазоны "1-5", шаги вида "звезда/5").
      * @param callable|null $handler Синхронный колбэк; если null — push($jobName) в Queue.
      * @param string|null $job Имя задачи в очереди (при handler === null).
      */

@@ -52,3 +52,17 @@
 {"ts":"2026-11-01T10:57:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
 {"ts":"2026-11-01T10:57:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
 {"ts":"2026-11-01T10:57:49+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:11+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:11+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:12+00:00","level":"ERROR","channel":"app","message":"kernel.run.crashed","context":{"message":"syntax error, unexpected integer \"5\", expecting \"function\" or \"const\"","file":"\/workspace\/core\/Contract\/SchedulerInterface.php:20"}}
+{"ts":"2026-11-01T11:08:12+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:18+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:18+00:00","level":"ERROR","channel":"app","message":"kernel.run.crashed","context":{"message":"syntax error, unexpected integer \"5\", expecting \"function\" or \"const\"","file":"\/workspace\/core\/Contract\/SchedulerInterface.php:20"}}
+{"ts":"2026-11-01T11:08:22+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:26+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:44+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:44+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:44+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:48+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:48+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}
+{"ts":"2026-11-01T11:08:48+00:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"demo.localhost"}}

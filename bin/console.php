@@ -103,6 +103,9 @@ switch ($command) {
     case 'migrate:rollback':
         $exitCode = runMigration($kernel, $command, $args);
         break;
+    case 'doctor':
+        $exitCode = runDoctor($kernel);
+        break;
     default:
         fwrite(STDERR, "Unknown command: {$command}\n");
         print_usage(2);
@@ -112,6 +115,31 @@ exit($exitCode);
 // ==============================================================================
 // Реализации команд
 // ==============================================================================
+
+/**
+ * doctor — самодиагностика сайта (§7.2). Агрегирует HealthCheck всех поднятых
+ * модулей через контейнер. Код возврата: 0 если нет fail, иначе 1 (удобно cron/zabbix).
+ */
+function runDoctor(Kernel $kernel): int
+{
+    /** @var \Core\Module\Doctor\Doctor $doctor */
+    $doctor = $kernel->get(\Core\Module\Doctor\Doctor::class);
+    $report = $doctor->diagnose();
+
+    $icons = ['ok' => 'OK ', 'warning' => 'WARN', 'fail' => 'FAIL'];
+    fwrite(STDOUT, sprintf("LEX Doctor · verdict=%s\n", strtoupper($report['status'])));
+    foreach ($report['checks'] as $check) {
+        $st = (string) ($check['status'] ?? 'fail');
+        $line = sprintf("  [%-4s] %-14s %s", $icons[$st] ?? '????', $check['name'] ?? '?', $check['message'] ?? '');
+        if (!empty($check['context']) && filter_var(getenv('CORE_DEBUG') ?: 'false', FILTER_VALIDATE_BOOLEAN)) {
+            $line .= ' ' . json_encode($check['context'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        fwrite(STDOUT, rtrim($line) . "\n");
+    }
+    $s = $report['summary'];
+    fwrite(STDOUT, sprintf("  summary: ok=%d warning=%d fail=%d\n", $s['ok'], $s['warning'], $s['fail']));
+    return $s['fail'] > 0 ? 1 : 0;
+}
 
 /**
  * queue:work — обрабатывает накопленные задачи. Обработчики регистрирует САЙТ
@@ -251,6 +279,7 @@ Commands:
   queue:work      Process queued jobs (--limit=N, default 10)
   queue:status    Show pending/failed job counts
   scheduler:run   Fire all jobs due at this minute (cron-safe, idempotent)
+  doctor          Site self-diagnostics (HealthCheck aggregation, exit 1 on fail)
 
 Options:
   --site=<domain> Site folder binding: sites/<domain> (default: cli.lex.local)

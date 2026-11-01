@@ -30,6 +30,8 @@ final class RuleEngine
             'C-001' => new Detector\EmergencyBunkerDetector(),
             'C-009' => new Detector\StrictTypesDetector(),
             'C-011' => new Detector\NewCoreInstantiationDetector(),
+            'C-016' => new Detector\ContainerGetLiteralDetector(),
+            'C-020' => new Detector\DirectFsAccessDetector(),
             'C-031' => new Detector\DirectFileLogDetector(),
             'C-040' => new Detector\UnsafeOutputDetector(),
         ];

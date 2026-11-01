@@ -1,0 +1,2 @@
+{"ts":"2026-11-01T15:47:48+00:00","level":"ERROR","channel":"database","message":"db.connect_failed","context":{"error":"could not find driver"}}
+{"ts":"2026-11-01T15:47:48+00:00","level":"ERROR","channel":"database","message":"db.connect_failed","context":{"error":"could not find driver"}}

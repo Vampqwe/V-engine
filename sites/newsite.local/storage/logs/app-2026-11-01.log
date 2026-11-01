@@ -1,0 +1,2 @@
+{"ts":"2026-11-01T18:47:48+03:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"newsite.local"}}
+{"ts":"2026-11-01T18:47:48+03:00","level":"INFO","channel":"app","message":"kernel.booted","context":{"version":"0.3.0","site":"newsite.local"}}

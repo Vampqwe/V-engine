@@ -71,6 +71,11 @@ final class AdminModule implements ModuleInterface
         $container = $kernel->getContainer();
         assert($container instanceof ContainerInterface);
 
+        // Админ-панель доступна ВСЕГДА и на любом хосте — включая прямой доступ
+        // к public/index.php (IP / localhost без виртуального хоста), когда
+        // домен определяется как «unknown» и папка sites/<домен> отсутствует.
+        // Раньше при неизвестном сайте boot() молча выходил, и панель не
+        // регистрировалась → 404 на /admin даже при верном DocumentRoot.
         $stats = new AdminStats($kernel);
         $container->instance(AdminStats::class, $stats);
 

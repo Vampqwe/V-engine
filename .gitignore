@@ -1,3 +1,3 @@
+sites/*/storage/sessions/
 .env
-*.log
-.phpunit.cache/
+.env.local

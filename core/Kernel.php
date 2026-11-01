@@ -329,7 +329,7 @@ final class Kernel implements KernelInterface
             $response = match ($result->status) {
                 RouteResult::FOUND => $this->handleFound($request, $result, $bus, $logger),
                 RouteResult::METHOD_NOT_ALLOWED => Response::methodNotAllowed($result->allowedMethods),
-                default => Response::notFound(),
+                default => $this->notFoundResponse($request),
             };
         } catch (\Throwable $e) {
             // Аварийный люк цикла: 500 вместо сырого исключения (§31).
@@ -375,6 +375,70 @@ final class Kernel implements KernelInterface
 
         return $response;
     }
+
+    /**
+     * Ответ 404: тёмная HTML-страница в стиле движка (совместима с админ-
+     * панелью), если сайт отдаёт HTML; JSON — для API-клиентов (Accept).
+     * Фолбэк ядра — сайт может не зарегистрировать свой обработчик 404.
+     */
+    private function notFoundResponse(RequestInterface $request): Response
+    {
+        $accept = strtolower($request->getHeader('Accept') ?? '');
+        if (str_contains($accept, 'application/json') && !str_contains($accept, 'text/html')) {
+            return Response::json(['error' => 'not_found', 'path' => $request->getPath()], 404);
+        }
+        $path = htmlspecialchars($request->getPath(), ENT_QUOTES, 'UTF-8');
+        // Диагностика: какие сайты есть в движке и что зарегистрировано в
+        // роутере (помогает найти причину 404 — например, папка sites/<домен>
+        // отсутствует или названа иначе, либо модуль панели не поднялся).
+        $sitesHint = '';
+        try {
+            /** @var SiteContextInterface $ctx */
+            $ctx = $this->container->get(SiteContextInterface::class);
+            $sitesDir = dirname($ctx->getBaseFolder());
+            $list = is_dir($sitesDir)
+                ? array_values(array_filter(scandir($sitesDir), static fn ($f) => $f !== '.' && $f !== '..' && is_dir($sitesDir . '/' . $f)))
+                : [];
+            $sitesHint = '<p style="color:#8b949e;font-size:.85rem;margin-top:1rem">Сайт запроса: <code>'
+                . htmlspecialchars($ctx->getDomain(), ENT_QUOTES, 'UTF-8') . '</code>'
+                . ($list !== [] ? ' · доступны: <code>' . htmlspecialchars(implode(', ', $list), ENT_QUOTES, 'UTF-8') . '</code>' : '')
+                . '</p>';
+        } catch (\Throwable) {
+            // диагностика не должна ронять страницу ошибки
+        }
+        // Список маршрутов ядра (только GET /... без параметров) — если среди
+        // них нет «GET /admin», значит панель не зарегистрировалась (boot).
+        $routesHint = '';
+        try {
+            $patterns = $this->router->listPatterns();
+            $plain = array_values(array_filter(
+                $patterns,
+                static fn (string $p): bool => str_starts_with($p, 'GET ') && !str_contains($p, '{'),
+            ));
+            if ($plain !== []) {
+                $routesHint = '<p style="color:#8b949e;font-size:.8rem;margin-top:.75rem;max-width:640px">Маршруты ядра: <code>'
+                    . htmlspecialchars(implode(' · ', array_slice($plain, 0, 24)), ENT_QUOTES, 'UTF-8')
+                    . (count($plain) > 24 ? ' …' : '') . '</code></p>';
+            }
+        } catch (\Throwable) {
+            // диагностика не должна ронять страницу ошибки
+        }
+        $html = '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            . '<title>404 · LEX Engine</title><style>body{background:#0d1117;color:#e6edf3;'
+            . 'font-family:-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;display:flex;'
+            . 'min-height:100vh;align-items:center;justify-content:center;margin:0}'
+            . '.box{text-align:center;padding:2rem;border:1px solid #30363d;border-radius:8px;background:#161b22}'
+            . 'h1{color:#f85149;font-size:3rem;margin:0 0 .5rem}code{background:#21262d;padding:.15rem .4rem;'
+            . 'border-radius:6px;color:#79c0ff}a{color:#1f6feb;text-decoration:none}</style></head><body>'
+            . '<div class="box"><h1>404</h1><p>Запрашиваемый ресурс <code>' . $path . '</code> не найден.</p>'
+            . '<p style="color:#8b949e">Он мог быть перемещён, удалён, или URL неверен.</p>'
+            . $sitesHint . $routesHint
+            . '<p><a href="/">← На главную</a> &nbsp;·&nbsp; <a href="/admin/">Админ-панель</a></p>'
+            . '</div></body></html>';
+        return Response::html($html, 404);
+    }
+
 
     /**
      * Экземпляр сессии текущего запроса, если он уже создавался в цикле

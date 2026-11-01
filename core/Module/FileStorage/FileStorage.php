@@ -224,6 +224,11 @@ final class FileStorage implements FileStorageInterface
             throw new FileStorageException('Path must not be empty.');
         }
 
+        // Windows-совместимость: путь может прийти с обратными слэшами
+        // (абсолютный из config, либо root вида «H:\...»). Сначала канонизируем
+        // (\ => /), затем решаем jail — иначе корень «H:/...» ошибочно считается
+        // относительным и normalize() прибивает к нему ведущий '/', ломая префикс.
+        $path = self::canonicalize($path);
         if ($path[0] === '/') {
             $candidate = $path;
         } else {
@@ -285,11 +290,20 @@ final class FileStorage implements FileStorageInterface
         return $path === $this->rootDir || str_starts_with($path, $this->rootDir . '/');
     }
 
-    /** Убирает ., .., двойные слэши без обращения к ФС. */
+    /**
+     * Убирает ., .., двойные слэши без обращения к ФС.
+     * Windows-совместимость: путь с диск-литерой («H:/...» — вид после
+     * canonicalize()) не должен получать фиктивный ведущий '/', иначе его
+     * префикс перестаёт совпадать с rootDir и jail-проверка падает ложно.
+     */
     private function normalize(string $path): string
     {
+        // Ведущий '/' только для unix-путей; «C:/...», «H:\...» — нет.
+        $leadingSlash = str_starts_with($path, '/') && !self::isWindowsAbsolute($path);
+        $body = $leadingSlash ? substr($path, 1) : $path;
+
         $parts = [];
-        foreach (explode('/', $path) as $seg) {
+        foreach (explode('/', $body) as $seg) {
             if ($seg === '' || $seg === '.') {
                 continue;
             }
@@ -299,6 +313,12 @@ final class FileStorage implements FileStorageInterface
             }
             $parts[] = $seg;
         }
-        return '/' . implode('/', $parts);
+        return ($leadingSlash ? '/' : '') . implode('/', $parts);
+    }
+
+    /** Диск-абсолютный Windows-путь в каноническом виде: «X:/...» или «X:\...». */
+    private static function isWindowsAbsolute(string $path): bool
+    {
+        return (bool) preg_match('#^[A-Za-z]:[/\\\\]#', $path);
     }
 }

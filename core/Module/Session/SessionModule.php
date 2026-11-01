@@ -54,7 +54,7 @@ final class SessionModule implements ModuleInterface
 
         $driver = strtolower((string) ($config->get('session.driver') ?? 'file'));
         $dir = rtrim((string) ($config->get('session.dir') ?? 'sessions'), '/');
-        $cookieName = (string) ($config->get('session.cookie') ?? 'VENGINE_SID');
+        $cookieName = (string) ($config->get('session.name') ?? 'VENGINE_SID');
 
         $storage = $container->get(FileStorageInterface::class);
         assert($storage instanceof FileStorageInterface);

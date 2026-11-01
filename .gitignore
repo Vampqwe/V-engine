@@ -1,2 +1,2 @@
-.phpunit.cache/
 *.log
+sites/*/storage/sessions/

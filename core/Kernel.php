@@ -350,10 +350,10 @@ final class Kernel implements KernelInterface
         // Сессия движка: если клиент ещё не знает свой SID (новый/битый cookie),
         // ядро само выпускает Set-Cookie (HttpOnly+SameSite=Lax; Secure — на https).
         // Иначе CSRF-токен, записанный в сессию при рендере, терялся бы на каждом
-        // запросе, и любое POST-действие падало бы с 500.
-        if (!$response->hasHeader('Set-Cookie')
-            && $this->container->has(SessionInterface::class)
-            && !$this->container->has(CookieInterface::class)) {
+        // запросе, и любое POST-действие падало бы с 403.
+        // Проверка hasIncomingId() обязательна: повторная выдача Set-Cookie после
+        // regenerate() перезаписала бы новый сид старым (гонка куков).
+        if ($this->container->has(SessionInterface::class)) {
             $session = $this->container->get(SessionInterface::class);
             assert($session instanceof SessionInterface);
             if ($session instanceof NativeSession && !$session->hasIncomingId()) {
@@ -363,7 +363,7 @@ final class Kernel implements KernelInterface
                     'Path=/',
                     'HttpOnly',
                     'SameSite=Lax',
-                    'Max-Age=' . (int) ($this->container->get(ConfigInterface::class)->get('session.lifetime', 86400)),
+                    'Max-Age=' . (int) ($this->container->get(ConfigInterface::class)->get('session.ttl', 1800)),
                 ];
                 if ($secure) {
                     $parts[] = 'Secure';

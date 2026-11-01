@@ -10,6 +10,7 @@ use Core\Contract\DatabaseInterface;
 use Core\Contract\FileStorageInterface;
 use Core\Contract\HealthCheckInterface;
 use Core\Contract\KernelInterface;
+use Core\Kernel;
 use Core\Contract\LoggerInterface;
 use Core\Contract\ModuleInterface;
 use Core\Contract\QueueInterface;
@@ -56,7 +57,9 @@ final class DoctorModule implements ModuleInterface
         // 1. Модули, отчитывающиеся сами (§7.2: HealthCheckInterface на сервисе).
         //    Источник истины — Реестр поднятых модулей (§25), reflection не используется.
         foreach ($kernel->getRegistry()->all() as $module) {
-            foreach ($module->getProvides() as $contract) {
+            // getProvides() не входит в обязательный контракт ModuleInterface —
+            // берём единый источник истины из ядра (явный метод или соглашение по имени).
+            foreach (Kernel::providesOfPublic($module) as $contract) {
                 if (!$container->has($contract)) {
                     continue;
                 }

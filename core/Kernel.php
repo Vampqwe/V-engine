@@ -30,6 +30,7 @@ use Core\Module\Cache\CacheModule;
 use Core\Module\Config\ConfigModule;
 use Core\Module\Cookie\CookieModule;
 use Core\Module\Database\DatabaseModule;
+use Core\Module\DataPortability\DataPortabilityModule;
 use Core\Module\Doctor\DoctorModule;
 use Core\Module\FeatureFlag\FeatureFlagModule;
 use Core\Module\FileStorage\FileStorageModule;
@@ -123,6 +124,7 @@ final class Kernel implements KernelInterface
             // --- P3 (§8.4): сервисные модули поверх готового ядра ---
             new FeatureFlagModule(),        // FeatureFlagInterface (требует Config+FileStorage)
             new MaintenanceModule(),        // MaintenanceModeInterface + системный middleware 503
+            new DataPortabilityModule(),    // DataPortabilityInterface (экспорт/импорт §8.4)
             new DoctorModule(),             // Doctor: агрегатор HealthCheck — поднимается ПОСЛЕДНИМ
         ];
     }
@@ -521,7 +523,7 @@ final class Kernel implements KernelInterface
         /** @var array<string, string> contract => provider name */
         $providers = [];
         foreach ($byName as $name => $module) {
-            foreach (self::providesOf($module) as $contract) {
+            foreach (self::providesOfPublic($module) as $contract) {
                 $providers[$contract] = $name;
             }
         }
@@ -566,7 +568,7 @@ final class Kernel implements KernelInterface
      *
      * @return string[]
      */
-    private static function providesOf(ModuleInterface $module): array
+    public static function providesOfPublic(ModuleInterface $module): array
     {
         if (method_exists($module, 'getProvides')) {
             /** @var string[] $explicit */

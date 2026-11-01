@@ -1,2 +1,3 @@
-sites/*/storage/sessions/
-*.log
+.phpunit.cache/
+sites/*/storage/logs/*.log
+sites/*/storage/maintenance.json

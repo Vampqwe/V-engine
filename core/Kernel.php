@@ -25,12 +25,16 @@ use Core\Contract\CacheInterface;
 use Core\Exception\ContainerException;
 use Closure;
 use Core\Exception\EngineException;
+use Core\Module\AuditLog\AuditLogModule;
 use Core\Module\Cache\CacheModule;
 use Core\Module\Config\ConfigModule;
 use Core\Module\Cookie\CookieModule;
 use Core\Module\Database\DatabaseModule;
 use Core\Module\FileStorage\FileStorageModule;
 use Core\Module\FileUpload\FileUploadModule;
+use Core\Module\Notification\NotificationModule;
+use Core\Module\Queue\QueueModule;
+use Core\Module\Scheduler\SchedulerModule;
 use Core\Module\Logger\LoggerModule;
 use Core\Module\Paginator\PaginatorModule;
 use Core\Module\Security\SecurityModule;
@@ -106,6 +110,10 @@ final class Kernel implements KernelInterface
             new ValidatorModule(),    // ValidatorInterface
             new PaginatorModule(),    // PaginatorInterface
             new FileUploadModule(),   // FileUploadInterface (P2, требует Config+FileStorage)
+            new QueueModule(),        // QueueInterface (P2, файловая очередь в jailed-root)
+            new SchedulerModule(),    // SchedulerInterface (P2, cron-проход без демона)
+            new NotificationModule(), // NotificationInterface (P2, log/smtp/mail без cURL)
+            new AuditLogModule(),     // AuditLogInterface (P2, БД или append-only файл)
         ];
     }
 

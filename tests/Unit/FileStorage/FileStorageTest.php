@@ -105,4 +105,28 @@ final class FileStorageTest extends TestCase
         self::assertSame('v2', $this->fs->load('atomic.txt'));
         self::assertSame([], $this->fs->list('*.tmp'));
     }
+
+    /**
+     * Регресс Windows-бага (OSPanel/OpenServer): realpath() на Windows возвращает
+     * смешанные разделители ("H:\...\storage/logs"), из-за чего jail-check
+     * отклонял легальные пути. Корень обязан канонизироваться к '/'.
+     */
+    public function testWindowsStyleMixedSeparatorsAreCanonicalized(): void
+    {
+        $canon = new ReflectionMethod(FileStorage::class, 'canonicalize');
+        self::assertSame(
+            'H:/Server/OSPanel/home/V-engine/sites/v-engine/storage/logs',
+            $canon->invoke(null, 'H:\\Server\\OSPanel\\home\\V-engine\\sites\\v-engine\\storage/logs'),
+        );
+        // Unix-путь без backslash не должен мутировать.
+        self::assertSame('/var/www/storage', $canon->invoke(null, '/var/www/storage'));
+    }
+
+    public function testResolveNonExistingWritePathStaysInJail(): void
+    {
+        // Сценарий boot SessionManager: директория sessions ещё не существует.
+        $resolve = new ReflectionMethod($this->fs, 'resolve');
+        $resolved = $resolve->invoke($this->fs, 'sessions/file.dat', true);
+        self::assertStringStartsWith($this->fs->getRootDir(), $resolved);
+    }
 }

@@ -36,12 +36,26 @@ final class FileStorage implements FileStorageInterface
         if ($real === false || !is_dir($real)) {
             throw new FileStorageException(sprintf('Storage root "%s" does not exist or is not a directory.', $rootDir));
         }
-        return new self($real);
+        // Windows-совместимость: realpath() на Windows возвращает смешанные
+        // разделители ("H:\Server\.../config"). Приводим корень к канону '/' —
+        // тот же вид, что даёт normalize() для entry-путей. Содержимое
+        // сегментов не меняется (обратный слэш в имени файла на Windows запрещён).
+        return new self(self::canonicalize($real));
     }
 
     public function getRootDir(): string
     {
         return $this->rootDir;
+    }
+
+    /** Канонический вид пути: \ => / (сохраняя ведущий слэш), без обращения к ФС. */
+    private static function canonicalize(string $path): string
+    {
+        if (!str_contains($path, '\\')) {
+            return $path;
+        }
+        $leading = str_starts_with($path, '/') ? '/' : '';
+        return $leading . str_replace('\\', '/', substr($path, strlen($leading)));
     }
 
     // =========================================================================
@@ -218,7 +232,7 @@ final class FileStorage implements FileStorageInterface
         $candidate = $this->normalize($candidate);
 
         // Для существующих целей проверяем реальный путь (защита от симлингов наружу).
-        $existing = realpath($candidate);
+        $existing = realpath($candidate) !== false ? self::canonicalize(realpath($candidate)) : false;
         if ($existing !== false) {
             $resolved = $existing;
         } else {
@@ -255,7 +269,8 @@ final class FileStorage implements FileStorageInterface
             $tail = basename($probe) . ($tail === '' ? '' : '/' . $tail);
             $probe = $parent;
         }
-        $real = realpath($probe);
+        $realRaw = realpath($probe);
+        $real = $realRaw === false ? false : self::canonicalize($realRaw);
         if ($real === false) {
             throw new FileStorageException(sprintf('Cannot resolve path "%s".', $candidate));
         }

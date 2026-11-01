@@ -46,7 +46,13 @@ final class CookieModule implements ModuleInterface
 
         $secret = (string) ($config->get('app.secret') ?? '');
         if ($secret === '') {
-            throw new SecurityException('SITE_SECRET is not configured for cookie signing.');
+            throw new SecurityException(
+                'APP_SECRET is missing in sites/' . $site->getBaseFolder() . '/.env. '
+                . 'Generate it: php -r "echo bin2hex(random_bytes(32));"',
+            );
+        }
+        if (strlen($secret) < 16) {
+            throw new SecurityException('APP_SECRET must be at least 16 characters.');
         }
         $secure = str_starts_with($site->getBaseUrl(), 'https://');
 

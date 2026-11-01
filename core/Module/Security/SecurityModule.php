@@ -45,8 +45,12 @@ final class SecurityModule implements ModuleInterface
         $secret = (string) ($config->get('app.secret') ?? '');
         if ($secret === '') {
             throw new SecurityException(
-                'SITE_SECRET is not configured. Add it to site .env (min 16 chars).',
+                'APP_SECRET is missing in sites/' . $site->getBaseFolder() . '/.env. '
+                . 'Generate it: php -r "echo bin2hex(random_bytes(32));"',
             );
+        }
+        if (strlen($secret) < 16) {
+            throw new SecurityException('APP_SECRET must be at least 16 characters.');
         }
 
         $container->protect(SecurityInterface::class, static function () use ($container, $secret): SecurityInterface {

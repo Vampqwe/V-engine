@@ -30,6 +30,7 @@ use Core\Module\Config\ConfigModule;
 use Core\Module\Cookie\CookieModule;
 use Core\Module\Database\DatabaseModule;
 use Core\Module\FileStorage\FileStorageModule;
+use Core\Module\FileUpload\FileUploadModule;
 use Core\Module\Logger\LoggerModule;
 use Core\Module\Paginator\PaginatorModule;
 use Core\Module\Security\SecurityModule;
@@ -104,6 +105,7 @@ final class Kernel implements KernelInterface
             new CacheModule(),        // CacheInterface
             new ValidatorModule(),    // ValidatorInterface
             new PaginatorModule(),    // PaginatorInterface
+            new FileUploadModule(),   // FileUploadInterface (P2, требует Config+FileStorage)
         ];
     }
 

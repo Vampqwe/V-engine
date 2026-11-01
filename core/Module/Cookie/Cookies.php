@@ -45,7 +45,12 @@ final class Cookies implements CookieInterface
 
     public function get(string $name): ?string
     {
-        $raw = $this->incoming[$name] ?? $this->pendingValue($name);
+        // pending имеет приоритет: remove()/set() в этом запросе переопределяют входящие куки.
+        if (array_key_exists($name, $this->pending)) {
+            $raw = $this->pending[$name]['value'];
+        } else {
+            $raw = $this->incoming[$name] ?? null;
+        }
         if ($raw === null) {
             return null;
         }
@@ -65,7 +70,8 @@ final class Cookies implements CookieInterface
 
     public function remove(string $name): void
     {
-        unset($this->incoming[$name]);
+        // $incoming readonly — удаление выражаем tombstone-записью в pending:
+        // get() вернёт null, emit отправит экспирацию в прошлом.
         $this->pending[$name] = ['value' => null, 'ttl' => 0];
         // Экспирация в прошлом + пустое значение.
         $this->sendCookie($name, '', -3600);

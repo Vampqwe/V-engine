@@ -42,6 +42,21 @@ final class TemplateView implements ViewInterface
     /** Отрендерить строковый шаблон (для писем/сниппетов). */
     public function renderString(string $code, array $data = []): string
     {
+        // Сниппеты могут быть в PHP-тегах. eval() не умеет режим шаблона, поэтому
+        // сниппет рендерится через временный файл во включаемом режиме (include),
+        // где закрывающий тег корректно возвращается в HTML-режим.
+        if (str_contains($code, '<' . '?')) {
+            $tmp = tempnam(sys_get_temp_dir(), 'lex-view-');
+            if ($tmp === false) {
+                throw new EngineException('Unable to create temporary snippet file.');
+            }
+            try {
+                file_put_contents($tmp, $code);
+                return self::capture($tmp, $data, $this->security);
+            } finally {
+                @unlink($tmp);
+            }
+        }
         return self::evaluate($code, $data, $this->security);
     }
 
@@ -53,11 +68,30 @@ final class TemplateView implements ViewInterface
     private function path(string $template): string
     {
         $t = ltrim(strtr($template, '\\', '/'), '/');
-        if ($t === '' || !preg_match('#^[A-Za-z0-9_\-./ ]+\.phtml$#', $t)) {
+        if ($t === '') {
             throw new EngineException(sprintf('Invalid template name "%s".', $template));
+        }
+        // Директории — любые сегменты без traversal; финальный сегмент — имя шаблона.
+        // Поддерживаются и 'hello', и 'hello.phtml', и 'sub/dir/name.phtml'.
+        $segments = explode('/', $t);
+        foreach ($segments as $seg) {
+            if ($seg === '' || !preg_match('#^[A-Za-z0-9_\\-. ]+$#', $seg)) {
+                throw new EngineException(sprintf('Invalid template name "%s".', $template));
+            }
         }
         if (str_contains($t, '..')) {
             throw new EngineException('Template traversal is forbidden.');
+        }
+        // Расширение: только .phtml. Имя без расширения получает .phtml по умолчанию;
+        // любое явно указанное расширение, кроме .phtml, отвергается (shell.php -> 400).
+        $file = (string) end($segments);
+        $dot = strrpos($file, '.');
+        if ($dot !== false && !str_ends_with($file, '.phtml')) {
+            throw new EngineException(sprintf('Invalid template name "%s".', $template));
+        }
+        // Расширение .phtml добавляется по умолчанию, если не указано.
+        if ($dot === false) {
+            $t .= '.phtml';
         }
         return $this->viewDir . '/' . $t;
     }

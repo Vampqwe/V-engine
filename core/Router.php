@@ -100,9 +100,13 @@ final class Router implements RouterInterface
         //    rtrim('/') (см. normalizePattern), поэтому маршрут, зарегистрированный
         //    как «/admin/», хранится под «/admin» и обязан отвечать на оба URL —
         //    иначе админ-панель ядра на пути /admin отдаёт 404 на любом хосте.
-        if (!isset($this->exactIndex[$method . '|' . $path]) && isset($this->trailingSlashAliases[$path])) {
-            $path = $this->trailingSlashAliases[$path];
+        //    Канонический путь для сопоставления: точные маршруты всегда сравниваются
+        //    со значением без хвостового слэша (normalizePattern делает rtrim('/')).
+        $canonicalPath = ($path !== '/' && str_ends_with($path, '/')) ? rtrim($path, '/') : $path;
+        if (!isset($this->exactIndex[$method . '|' . $canonicalPath]) && isset($this->trailingSlashAliases[$canonicalPath])) {
+            $canonicalPath = $this->trailingSlashAliases[$canonicalPath];
         }
+        $path = $canonicalPath;
 
         // 1. Точные совпадения — быстрее и детерминированнее regex.
         $key = $method . '|' . $path;
@@ -142,6 +146,24 @@ final class Router implements RouterInterface
                 [$routeMethod] = explode('#', $routeKey, 2);
                 if ($routeMethod !== $method) {
                     $allowed[$routeMethod] = true;
+                }
+            }
+            // Маршрут-шаблон может «накрывать» запрошенный путь более длинным
+            // префиксом: /form подпадает под /form/{id} (PUT, PATCH). Собираем
+            // допустимые методы и таких шаблонов — иначе вместо 405 отдаём 404.
+            if ($allowed === []) {
+                foreach ($this->routes as $routeMethod => $list) {
+                    if ($routeMethod === $method) {
+                        continue;
+                    }
+                    foreach ($list as $route) {
+                        if ($route['regex'] === null) {
+                            continue;
+                        }
+                        if (preg_match($route['regex'], $path) === 1) {
+                            $allowed[$routeMethod] = true;
+                        }
+                    }
                 }
             }
         }

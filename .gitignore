@@ -1,5 +1,28 @@
+# Локальные окружения (секреты, конституция §8.1)
 .env
 .env.local
-*.env.*
+sites/*/.env
+
+# Шаблоны окружений должны оставаться в репозитории
+!sites/*/.env.example
+!.env.example
+
+# Артефакты сборки и выполнения
 *.log
+/vendor/
 .phpunit.cache/
+.phpunit.result.cache
+.php-cs-fixer.cache
+
+# Хранилища сайтов: в git только структуру (.gitkeep) и миграции
+sites/*/storage/logs/*
+!sites/*/storage/logs/.gitkeep
+sites/*/storage/sessions/*
+!sites/*/storage/sessions/.gitkeep
+sites/*/storage/cache/*
+!sites/*/storage/cache/.gitkeep
+sites/*/storage/views/*
+!sites/*/storage/views/.gitkeep
+sites/*/storage/uploads/*
+!sites/*/storage/uploads/.gitkeep
+sites/*/storage/framework/

@@ -53,12 +53,12 @@ final class ConfigTest extends TestCase
     public function testEnvOverridesPhpSections(): void
     {
         $this->writeSection('core', "['debug' => false]");
-        file_put_contents($this->dir . '/.env', "# comment\nCORE_DEBUG=true\nSITE_URL=\"https://mysite.com\"\nexport APP_NAME='My Site'\nBAD LINE\nQUOTED=\"a \\\"b\\\" c\"\nINLINE=42 # trailing\n");
+        file_put_contents($this->dir . '/.env', "# comment\nCORE_DEBUG=true\nSITE_URL=\"https://example.com\"\nexport APP_NAME='My Site'\nBAD LINE\nQUOTED=\"a \\\"b\\\" c\"\nINLINE=42 # trailing\n");
 
         $config = (new Config($this->dir . '/config', $this->dir . '/.env'))->load();
 
         self::assertTrue($config->get('core.debug'), 'ENV CORE_DEBUG must override php section');
-        self::assertSame('https://mysite.com', $config->get('site.url'));
+        self::assertSame('https://example.com', $config->get('site.url'));
         self::assertSame('My Site', $config->get('app.name'));
         self::assertSame('a "b" c', $config->get('quoted'));
         self::assertSame(42, $config->get('inline'));

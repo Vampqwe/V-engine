@@ -1,4 +1,5 @@
-sites/*/storage/sessions/
-sites/*/storage/views/
-sites/*/storage/maintenance.json
+.env
+.env.local
+*.env.*
 *.log
+.phpunit.cache/

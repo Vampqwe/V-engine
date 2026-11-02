@@ -63,7 +63,26 @@ final class SiteContext implements SiteContextInterface
 
         $baseFolder = $engineRoot . '/sites/' . $domain;
         if (!is_dir($baseFolder)) {
-            throw new ContainerException(sprintf('Site folder "%s" does not exist for domain "%s".', $baseFolder, $domain));
+            // Dev-режим (CLI / php -S встроенный сервер): хосты вида
+            // localhost, 127.0.0.1, ::1 и *-local не имеют DNS-имени, поэтому
+            // под них не создаётся папка sites/<домен>. Вместо 500 на любом
+            // запросе — fallback на демо-сайт sites/demo.localhost.
+            // В проде поведение прежнее: неизвестный домен => ошибка (§10).
+            $isLocalHost = filter_var($domain, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4 | FILTER_FLAG_IPV6) !== false
+                || $domain === 'localhost'
+                || str_ends_with($domain, '.localhost')
+                || str_ends_with($domain, '-local');
+            $debugEnv = $env['CORE_DEBUG'] ?? getenv('CORE_DEBUG');
+            $demoFolder = $engineRoot . '/sites/demo.localhost';
+            if ($isLocalHost && is_dir($demoFolder)
+                && is_string($debugEnv) && filter_var($debugEnv, FILTER_VALIDATE_BOOLEAN)) {
+                return new self($engineRoot, $domain, $demoFolder, 'http://' . $domain);
+            }
+            throw new ContainerException(sprintf(
+                'Site folder "%s" does not exist for domain "%s". Create sites/%s/ '
+                . '(see docs/START-HERE.md) or run with CORE_DEBUG=true to use the demo site on local hosts.',
+                $baseFolder, $domain, $domain
+            ));
         }
 
         $scheme = 'https';

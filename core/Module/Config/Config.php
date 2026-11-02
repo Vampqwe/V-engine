@@ -21,6 +21,34 @@ final class Config implements ConfigInterface
 {
     public const VERSION = '1.0.0';
 
+    /**
+     * Префиксы ENV-имён, допустимые как конфигурация приложения
+     * (см. isAppEnvName()). Собраны по реальным .env/.env.example движка:
+     * APP_*, CACHE_*, CORE_*, DB_*, SESSION_*, SITE_*, MAIL_*, KERNEL_*, TRUSTED_*.
+     */
+    private const ENV_PREFIXES = [
+        'APP_',
+        'CACHE_',
+        'CORE_',
+        'DB_',
+        'KERNEL_',
+        'LOG_',
+        'MAIL_',
+        'QUEUE_',
+        'SESSION_',
+        'SITE_',
+        'STORAGE_',
+        'TRUSTED_',
+        'UPLOAD_',
+        'VIEW_',
+    ];
+
+    /** Точные имена без префикса-группы. */
+    private const ENV_EXACT_NAMES = [
+        'ENV',
+        'DEBUG',
+    ];
+
     /** @var array<string, array<string, mixed>> section => data */
     private array $sections = [];
 
@@ -245,6 +273,35 @@ final class Config implements ConfigInterface
             fclose($handle);
         }
         return $out;
+    }
+
+    /**
+     * Белый список имён ENV, которые считаются конфигурацией приложения.
+     *
+     * В процессном окружении (getenv()/$_ENV/$_SERVER) живёт множество
+     * служебных переменных ОС и веб-сервера (PATH, HOME, TERM, TMUX_PANE,
+     * HTTP_*, REQUEST_*, REDIS_* …). Маппинг «всего похожего на UPPER_SNAKE»
+     * в конфиг превращал бы их в секции ('shell', 'term', 'pwd' …) и
+     * протекал бы в all()/экспорт DataPortability. Конфигурация движка и
+     * сайтов использует префиксы ниже; точечные ключи (app.secret) — тоже.
+     *
+     * Файл .env сайта проходит через parseEnvFile() и этим фильтром НЕ
+     * режется: ограничение касается только процессного окружения.
+     */
+    public static function isAppEnvName(string $name): bool
+    {
+        // Точечный стиль: site.url, cache.ttl — всегда конфигурация.
+        if (str_contains($name, '.')) {
+            return (bool) preg_match('/^[a-z0-9_.-]+$/i', $name);
+        }
+        // UPPER_SNAKE с разрешённым префиксом (APP_, DB_, SITE_, CORE_ ...).
+        foreach (self::ENV_PREFIXES as $prefix) {
+            if (str_starts_with($name, $prefix)) {
+                return true;
+            }
+        }
+        // Единичные точные имена без общего префикса.
+        return in_array($name, self::ENV_EXACT_NAMES, true);
     }
 
     private static function unquote(string $value): string

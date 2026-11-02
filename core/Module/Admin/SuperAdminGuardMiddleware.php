@@ -27,11 +27,31 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
      *        (панель в режиме «настрой меня»: публичные страницы тоже закрыты,
      *        кроме login — там показывается CLI-подсказка).
      * @param string[] $prefixes префиксы защищённого пространства
+     * @param callable|null $liveAuthResolver ленивый доступ к аутентификатору
+     *        контейнера: guard-привод unknown-host отличает «модуль поднялся и
+     *        сам обработает POST /login» от «хендлера нет — отвечать здесь».
      */
     public function __construct(
         private readonly ?SuperAdminAuthenticatorInterface $auth,
         private readonly array $prefixes = [AdminModule::SYSTEM_PATH, AdminModule::PATH],
+        private readonly mixed $liveAuthResolver = null,
     ) {
+    }
+
+    /** Поднялся ли модуль панели на этом хосте (живой login-обработчик есть)? */
+    private function hasLiveAuth(): bool
+    {
+        if ($this->auth !== null) {
+            return true; // конструкторный auth — самый прямой признак
+        }
+        if (is_callable($this->liveAuthResolver)) {
+            try {
+                return ($this->liveAuthResolver)() instanceof SuperAdminAuthenticatorInterface;
+            } catch (\Throwable) {
+                return false; // диагностика не должна ронять guard (§31)
+            }
+        }
+        return false;
     }
 
     public function handle(RequestInterface $request, callable $next): object
@@ -41,7 +61,21 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             return $next($request); // вне пространства панели — не мешаем
         }
         if ($this->isPublicEntry($path)) {
-            return $next($request); // login/logout доступны без сессии
+            // login/logout доступны без сессии. GET-страницу логина трогать
+            // нельзя: живой маршрут должен отрендериться (и создать сессионный
+            // экземпляр), чтобы ядро выпустило Set-Cookie SID — иначе CSRF-токен
+            // формы теряется и любой POST падает с 403 (§9). А вот POST /login
+            // на живой маршрут вести бессмысленно, когда панели нет (unknown-
+            // host): хендлер не зарегистрирован → 404 вместо формы с ошибкой.
+            // Поэтому невалидный POST пропускаем дальше только если в контейнере
+            // есть живой аутентификатор (значит, модуль поднялся и обработает).
+            if (strtoupper($request->getMethod()) === 'POST'
+                && $this->loginEntry($path)
+                && !$this->hasLiveAuth()) {
+                // fallthrough: ниже сработает guard-привод unknown-host
+            } else {
+                return $next($request);
+            }
         }
         if ($this->auth !== null && $this->auth->validateToken($this->cookie($request))) {
             return $next($request); // сессия супер-админа валидна

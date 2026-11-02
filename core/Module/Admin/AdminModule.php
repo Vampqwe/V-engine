@@ -122,7 +122,14 @@ final class AdminModule implements ModuleInterface
         // Системный middleware: закрывает ВСЁ пространство /system/* и legacy
         // /admin/* за исключением маршрутов входа. Регистрируется раньше
         // маршрутов — панель физически недоступна без сессии супер-админа.
-        $kernel->addSystemMiddleware(new SuperAdminGuardMiddleware($auth, self::PREFIXES));
+        // liveAuthResolver: guard должен отличать «живой POST /login обработает
+        // маршрут модуля» от «модуль не поднялся (unknown-host) — отвечать мне».
+        // Ленивый has() (не get()): не создаёт экземпляр раньше времени (§4).
+        $kernel->addSystemMiddleware(new SuperAdminGuardMiddleware(
+            $auth,
+            self::PREFIXES,
+            static fn (): bool => $container->has(SuperAdminAuthenticatorInterface::class),
+        ));
 
         $render = static function (string $template, array $data) use ($view, $stats, $security, $container): Response {
             $data['stats'] ??= null;
@@ -154,7 +161,17 @@ final class AdminModule implements ModuleInterface
 
         // --- Публичные маршруты входа (исключения guard-middleware) -----------
         $loginRender = static function (array $data) use ($view, $security): Response {
-            $data['csrf'] ??= $security->csrfToken();
+            // Токен берём из сессии ТОЛЬКО когда SID уже у клиента: иначе токен
+            // ляжет в сессию, которой у браузера нет, и ядро выпустит новый SID —
+            // POST прилетит в пустую сессию и упадёт с 403 (§9). Без SID отдаём
+            // страницу БЕЗ формы; Kernel после выпуска Set-Cookie SID делает
+            // внутренний re-render (see Kernel::run), где токен уже корректен.
+            $sidKnown = self::hasSessionCookie();
+            if ($sidKnown) {
+                $data['csrf'] ??= $security->csrfToken();
+            } else {
+                unset($data['csrf']);
+            }
             $data['action'] ??= self::SYSTEM_PATH . '/login';
             return Response::html($view->render('admin/login', $data));
         };

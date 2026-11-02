@@ -41,6 +41,9 @@ final class Container implements ContainerInterface
     /** @var array<string, true> Системные сервисы ядра (защищены от перезаписи) */
     private array $protected = [];
 
+    /** @var array<string, object> Резолвы protect()-фабрик: ОДИН экземпляр на id */
+    private array $protectedResolved = [];
+
     /** @var string[] Текущая цепочка резолва (для детектора циклов) */
     private array $resolvingStack = [];
 
@@ -92,9 +95,21 @@ final class Container implements ContainerInterface
      */
     public function protect(string $id, callable $factory): void
     {
-        unset($this->instances[$id], $this->factories[$id], $this->aliases[$id]);
+        unset($this->instances[$id], $this->factories[$id], $this->aliases[$id], $this->protectedResolved[$id]);
         $this->bindings[$id] = $factory;
         $this->protected[$id] = true;
+    }
+
+    /**
+     * Экземпляр защищённого сервиса БЕЗ создания нового: если protect()-фабрика
+     * уже резолвилась в этом запросе — вернётся тот же объект, иначе null.
+     * Нужно ядру (Set-Cookie слой Kernel), чтобы не триггерить ленивую фабрику
+     * и не выпускать сессию/ресурс «просто так».
+     */
+    public function protectedInstance(string $id): ?object
+    {
+        $resolved = $this->protectedResolved[$id] ?? ($this->instances[$id] ?? null);
+        return $resolved instanceof object ? $resolved : null;
     }
 
     public function isProtected(string $id): bool
@@ -132,9 +147,19 @@ final class Container implements ContainerInterface
 
         // Пользовательская фабрика/привязка
         if (isset($this->bindings[$id])) {
+            // protect()-сервисы — синглтоны ядра: один экземпляр на id на весь
+            // цикл запроса. Без этого слоя каждая get() создавала бы новый объект
+            // (например, новая NativeSession со своим сидом), и Set-Cookie слой
+            // Kernel'а не мог бы узнать сессию, в которой реально лежит CSRF-токен.
+            if (isset($this->protected[$id]) && isset($this->protectedResolved[$id])) {
+                return $this->protectedResolved[$id];
+            }
             $object = ($this->bindings[$id])($this);
             if (!isset($this->factories[$id])) {
                 $this->instances[$id] = $object;
+            }
+            if (isset($this->protected[$id]) && $object instanceof object) {
+                $this->protectedResolved[$id] = $object;
             }
             return $object;
         }

@@ -442,24 +442,21 @@ final class Kernel implements KernelInterface
 
     /**
      * Экземпляр сессии текущего запроса, если он уже создавался в цикле
-     * (например, Security при выдаче CSRF-токена). Берётся из factory,
-     * сохранённого SessionModule через protect(): повторный вызов вернёт
-     * тот же самый объект (NativeSession кеширует данные сам). Если сессия
-     * в этом запросе не использовалась — null (Set-Cookie не нужен).
+     * (например, Security при выдаче CSRF-токена). Берётся из реестра
+     * protect()-синглтонов контейнера: любой get() SessionInterface в этом
+     * запросе возвращает именно этот объект. Если сессия не использовалась —
+     * null (Set-Cookie не нужен, ленивая фабрика не триггерится и не создаёт
+     * «сессию-призрак» со свежим сидом).
      */
     private function resolveBootSession(): ?SessionInterface
     {
         if (!$this->container->has(SessionInterface::class)) {
             return null;
         }
-        $factory = method_exists($this->container, 'rawFactory')
-            ? $this->container->rawFactory(SessionInterface::class)
+        $instance = method_exists($this->container, 'protectedInstance')
+            ? $this->container->protectedInstance(SessionInterface::class)
             : null;
-        if ($factory instanceof \Closure) {
-            $instance = $factory();
-            return $instance instanceof SessionInterface ? $instance : null;
-        }
-        return null;
+        return $instance instanceof SessionInterface ? $instance : null;
     }
 
     private function handleFound(RequestInterface $request, RouteResult $result, EventBusInterface $bus, LoggerInterface $logger): Response

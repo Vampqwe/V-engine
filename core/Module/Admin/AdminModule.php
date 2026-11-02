@@ -393,7 +393,27 @@ final class AdminModule implements ModuleInterface
         $sourceDir = __DIR__ . '/templates';
         $versionPath = 'views/admin/.version';
         $current = self::TEMPLATE_VERSION;
-        if (!$storage->exists($versionPath) || trim((string) $storage->load($versionPath)) !== $current) {
+        // Сравнение с ЭТАЛОНОМ (а не только с меткой .version): если источник шаблона
+        // обновился без bump версии (или опубликованная копия была правлена вручную),
+        // копия всё равно переустанавливается эталонной — панель ядра никогда не
+        // должна рендерить устаревший/сломанный шаблон (§31, single source of truth).
+        $stale = !$storage->exists($versionPath) || trim((string) $storage->load($versionPath)) !== $current;
+        if (!$stale) {
+            foreach (self::TEMPLATE_NAMES as $name) {
+                $ext = $name === 'helpers' ? 'php' : 'phtml';
+                $srcFile = $sourceDir . '/' . $name . '.' . $ext;
+                if (!is_file($srcFile)) {
+                    $stale = true;
+                    break;
+                }
+                $published = $storage->load('views/admin/' . $name . '.' . $ext);
+                if (!is_string($published) || $published !== (string) file_get_contents($srcFile)) {
+                    $stale = true;
+                    break;
+                }
+            }
+        }
+        if ($stale) {
             foreach (self::TEMPLATE_NAMES as $name) {
                 $ext = $name === 'helpers' ? 'php' : 'phtml';
                 $path = 'views/admin/' . $name . '.' . $ext;

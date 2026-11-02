@@ -161,27 +161,21 @@ final class AdminModule implements ModuleInterface
 
         // --- Публичные маршруты входа (исключения guard-middleware) -----------
         $loginRender = static function (array $data) use ($view, $security): Response {
-            // Токен берём из сессии ТОЛЬКО когда SID уже у клиента: иначе токен
-            // ляжет в сессию, которой у браузера нет, и ядро выпустит новый SID —
-            // POST прилетит в пустую сессию и упадёт с 403 (§9). Без SID отдаём
-            // страницу БЕЗ формы; Kernel после выпуска Set-Cookie SID делает
-            // внутренний re-render (see Kernel::run), где токен уже корректен.
-            $sidKnown = self::hasSessionCookie();
-            if ($sidKnown) {
-                $data['csrf'] ??= $security->csrfToken();
-            } else {
-                unset($data['csrf']);
-            }
+            // Токен ВСЕГДА берётся из сессии текущего запроса через SecurityInterface
+            // (§9). Если SID у клиента ещё нет, токен ляжет в новую сессию, а ядро в
+            // конце run() выпустит Set-Cookie SID ровно для того экземпляра, который
+            // создал Security (protect-синглтон + resolveBootSession) — POST придёт
+            // в ту же сессию и токен сойдётся. Никакого «re-render в Kernel» для
+            // этого не требуется: схема была излишней и ломала первую форму входа.
+            $data['csrf'] ??= $security->csrfToken();
             $data['action'] ??= self::SYSTEM_PATH . '/login';
             return Response::html($view->render('admin/login', $data));
         };
 
         foreach (self::PREFIXES as $prefix) {
-            $router->get($prefix . '/login', function (RequestInterface $request) use ($auth, $loginRender): Response {
-                if ($auth !== null && $auth->isConfigured()) {
-                    return $loginRender(['mode' => 'form']);
-                }
-                return $loginRender(['mode' => 'setup']);
+            $router->get($prefix . '/login', function (RequestInterface $request) use ($auth, $loginRender, $prefix): Response {
+                $mode = ($auth !== null && $auth->isConfigured()) ? 'form' : 'setup';
+                return $loginRender(['mode' => $mode, 'action' => $prefix . '/login']);
             });
 
             $router->post($prefix . '/login', function (RequestInterface $request) use ($auth, $security, $loginRender): Response {

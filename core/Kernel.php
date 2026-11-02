@@ -313,6 +313,12 @@ final class Kernel implements KernelInterface
         $logger = $this->container->get(LoggerInterface::class);
         assert($logger instanceof LoggerInterface);
 
+        // Пер-запросовый сброс protect()-синглтонов ядра (Session и др.): иначе
+        // второй run() на том же контейнере переиспользовал бы сессию первого
+        // запроса — с чужим SID и «осиротевшим» CSRF-токеном. Клиентские куки
+        // при этом терялись: POST в новый запрос падал с 403 (§9).
+        $this->container->resetProtected();
+
         // Текущий запрос доступен сервисам через контейнер (Session/Cookie/View).
         $this->container->instance(RequestInterface::class, $request);
 

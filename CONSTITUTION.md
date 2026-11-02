@@ -362,7 +362,7 @@ $kernel->addUserModule(new MyModule()); // ✅ Единственный спос
 
 **ПРАВИЛЬНАЯ СТРУКТУРА:**
 ```
-public/mysite.by/
+public/example.by/
   ├── /assets     (только CSS, JS, IMG)
   ├── /view       (только шаблоны HTML)
   └── /module     (только PHP-логика)
@@ -818,7 +818,7 @@ core/
 ### Статья 20. Структура пользовательского сайта
 
 ```
-public/mysite.by/
+public/example.by/
   ├── .env                    (конфигурация сайта)
   │
   ├── assets/                 (только статика)
@@ -1061,7 +1061,7 @@ ENGINE_BASE_PATH/
   │   ├── database.php
   │   └── {module_name}.php
   │
-  └── public/mysite.by/
+  └── public/example.by/
       └── .env  (SITE_BASE_URL, SITE_BASE_FOLDER, APP_KEY)
 ```
 

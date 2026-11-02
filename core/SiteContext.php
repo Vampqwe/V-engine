@@ -10,7 +10,7 @@ use Core\Exception\ContainerException;
  * Контекст сайта (многосайтовость, §10 + принятые решения).
  *
  * Жёсткая привязка домена к папке сайта:
- *   SITE_URL=https://mysite.com  =>  SITE_DIR=<ENGINE_ROOT>/sites/mysite.com
+ *   SITE_URL=https://example.com  =>  SITE_DIR=<ENGINE_ROOT>/sites/example.com
  *
  * Единая точка входа public/index.php; APP_ROOT = __DIR__ движка.
  * Домен берётся из HTTP_HOST (веб) или из env-переменной SITE_DOMAIN (CLI/тесты).

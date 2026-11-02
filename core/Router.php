@@ -100,9 +100,13 @@ final class Router implements RouterInterface
         //    rtrim('/') (см. normalizePattern), поэтому маршрут, зарегистрированный
         //    как «/admin/», хранится под «/admin» и обязан отвечать на оба URL —
         //    иначе админ-панель ядра на пути /admin отдаёт 404 на любом хосте.
-        if (!isset($this->exactIndex[$method . '|' . $path]) && isset($this->trailingSlashAliases[$path])) {
-            $path = $this->trailingSlashAliases[$path];
+        //    Канонический путь для сопоставления: точные маршруты всегда сравниваются
+        //    со значением без хвостового слэша (normalizePattern делает rtrim('/')).
+        $canonicalPath = ($path !== '/' && str_ends_with($path, '/')) ? rtrim($path, '/') : $path;
+        if (!isset($this->exactIndex[$method . '|' . $canonicalPath]) && isset($this->trailingSlashAliases[$canonicalPath])) {
+            $canonicalPath = $this->trailingSlashAliases[$canonicalPath];
         }
+        $path = $canonicalPath;
 
         // 1. Точные совпадения — быстрее и детерминированнее regex.
         $key = $method . '|' . $path;
@@ -136,9 +140,15 @@ final class Router implements RouterInterface
             }
         }
 
-        // 3. Путь существует, но метод не тот → 405 (точечные маршруты тоже учтём).
-        if ($allowed === []) {
-            foreach ($this->exactRoutes[$path] ?? [] as $routeKey) {
+        // 3. Путь существует, но метод не тот → 405. Раздел 2 сканирует ВСЕ
+        //    методы (включая точные маршруты с regex === null), поэтому сюда
+        //    мы попадаем только когда ни один маршрут любого метода не совпал.
+        //    Единственное оставшееся исключение — хвостовой слэш: запрос
+        //    «/form/» обязан получать тот же 405, что и «/form» (точные
+        //    маршруты хранятся без слэша, а normalizePath его сохраняет).
+        if ($allowed === [] && $path !== '/' && str_ends_with($path, '/')) {
+            $slashless = rtrim($path, '/');
+            foreach ($this->exactRoutes[$slashless] ?? [] as $routeKey) {
                 [$routeMethod] = explode('#', $routeKey, 2);
                 if ($routeMethod !== $method) {
                     $allowed[$routeMethod] = true;

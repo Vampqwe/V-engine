@@ -22,7 +22,7 @@
     <?php endforeach; ?></div>
     <p style="margin:0 0 6px;color:var(--fg-muted);font-size:12px">Полезные (опциональные драйверы)</p>
     <div class="chips"><?php foreach ((array) ($p['extensions']['useful'] ?? []) as $e): ?>
-      <span class="badge <?= $e['loaded'] ? 'ok' : 'muted' ?>"><?= $esc(lex_adm_icon($e['loaded'] ? 'ok' : 'muted')) ?> <?= $esc($e['name']) ?></span>
+      <span class="badge <?= $esc(lex_adm_bool_badge((bool) $e['loaded'])) ?>"><?= $esc(lex_adm_icon($e['loaded'] ? 'ok' : 'muted')) ?> <?= $esc($e['name']) ?></span>
     <?php endforeach; ?></div>
   </div></div>
 </div>

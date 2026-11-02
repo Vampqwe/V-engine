@@ -60,6 +60,14 @@ if (!function_exists('lex_adm_icon')) {
         };
     }
 }
+
+if (!function_exists('lex_adm_bool_badge')) {
+    /** Класс бейджа по булеву признаку (белый список — safe для jail-детектора §40). */
+    function lex_adm_bool_badge(bool $loaded): string
+    {
+        return $loaded ? 'ok' : 'muted';
+    }
+}
 /** CSS-переменная цвета по статусу health (белый список — safe для jail-детектора §40). */
 function lex_adm_css_var(string $status): string
 {

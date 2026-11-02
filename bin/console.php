@@ -11,7 +11,7 @@ declare(strict_types=1);
 //   php bin/console.php --help
 //
 // Сайт выбирается аргументом --site (домен => папка sites/<домен>, §8 многосайтовость).
-// В cron для планировщика: * * * * * php /path/bin/console.php scheduler:run --site=mysite.com
+// В cron для планировщика: * * * * * php /path/bin/console.php scheduler:run --site=example.com
 // ==============================================================================
 
 if (!defined('ENGINE_BASE_PATH')) {
@@ -303,7 +303,7 @@ Options:
 
 Examples:
   php bin/console.php queue:work --site=demo.localhost --limit=50
-  * * * * * php /path/to/engine/bin/console.php scheduler:run --site=mysite.com
+  * * * * * php /path/to/engine/bin/console.php scheduler:run --site=example.com
 
 TXT);
     exit($code);

@@ -54,7 +54,7 @@ V-engine/
 ├── config/                        ← Модульная конфигурация
 ├── public/
 │   ├── index.php                  ← С аварийным люком
-│   └── mysite.by/                 ← Пользовательский сайт
+│   └── example.by/                 ← Пользовательский сайт
 ├── database/                      ← SQL-миграции
 ├── tests/
 ├── composer.json

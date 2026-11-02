@@ -14,9 +14,9 @@ sites/<домен>/   →   https://<домен>
 
 | Домен запроса (HTTP_HOST) | Папка сайта |
 |---|---|
-| `mysite.com` | `sites/mysite.com/` |
-| `newsite.local` | `sites/newsite.local/` |
+| `example.com` | `sites/example.com/` (создаёте сами) |
 | `demo.localhost` | `sites/demo.localhost/` |
+| `v-engine` | `sites/v-engine/` |
 
 Единая точка входа — одна на все сайты: **`public/index.php`**. Она смотрит заголовок `Host:`
 виртуального хоста, находит папку `sites/<домен>` и поднимает ядро в контексте этого сайта.
@@ -36,11 +36,13 @@ sites/<домен>/   →   https://<домен>
 Самый быстрый путь — скопировать готовый шаблон сайта со всеми конфигами:
 
 ```bash
-cp -r sites/newsite.local sites/mydomain.com     # эталон с комментариями в каждом файле
+cp -r sites/demo.localhost sites/mydomain.com    # каркас с комментариями в каждом файле
 cd sites/mydomain.com && cp .env.example .env
+mkdir -p storage/{cache,logs,sessions,uploads,views}
+touch storage/{cache,logs,sessions,uploads,views}/.gitkeep
 ```
 
-(Папка `sites/newsite.local` в этом репозитории — полный образцовый сайт-каркас.)
+(Папка `sites/demo.localhost` в этом репозитории — полный образцовый сайт-каркас.)
 
 ### Шаг 2. Заполнить `.env`
 

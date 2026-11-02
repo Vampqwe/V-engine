@@ -370,7 +370,10 @@ final class Kernel implements KernelInterface
             if ($secure) {
                 $parts[] = 'Secure';
             }
-            $response = $response->withHeader('Set-Cookie', implode('; ', $parts));
+            // withAddedHeader, а не withHeader: обработчик мог уже выдать
+            // Set-Cookie (например, LEX_SUPERADMIN при входе супер-админа) —
+            // перетирать его нельзя, HTTP допускает несколько строк Set-Cookie.
+            $response = $response->withAddedHeader('Set-Cookie', implode('; ', $parts));
         }
 
         return $response;
@@ -442,24 +445,21 @@ final class Kernel implements KernelInterface
 
     /**
      * Экземпляр сессии текущего запроса, если он уже создавался в цикле
-     * (например, Security при выдаче CSRF-токена). Берётся из factory,
-     * сохранённого SessionModule через protect(): повторный вызов вернёт
-     * тот же самый объект (NativeSession кеширует данные сам). Если сессия
-     * в этом запросе не использовалась — null (Set-Cookie не нужен).
+     * (например, Security при выдаче CSRF-токена). Берётся из реестра
+     * protect()-синглтонов контейнера: любой get() SessionInterface в этом
+     * запросе возвращает именно этот объект. Если сессия не использовалась —
+     * null (Set-Cookie не нужен, ленивая фабрика не триггерится и не создаёт
+     * «сессию-призрак» со свежим сидом).
      */
     private function resolveBootSession(): ?SessionInterface
     {
         if (!$this->container->has(SessionInterface::class)) {
             return null;
         }
-        $factory = method_exists($this->container, 'rawFactory')
-            ? $this->container->rawFactory(SessionInterface::class)
+        $instance = method_exists($this->container, 'protectedInstance')
+            ? $this->container->protectedInstance(SessionInterface::class)
             : null;
-        if ($factory instanceof \Closure) {
-            $instance = $factory();
-            return $instance instanceof SessionInterface ? $instance : null;
-        }
-        return null;
+        return $instance instanceof SessionInterface ? $instance : null;
     }
 
     private function handleFound(RequestInterface $request, RouteResult $result, EventBusInterface $bus, LoggerInterface $logger): Response
@@ -602,8 +602,21 @@ final class Kernel implements KernelInterface
     public function send(Response $response): void
     {
         http_response_code($response->getStatusCode());
+        $setCookies = $response->getSetCookieHeaders();
         foreach ($response->getHeaders() as $name => $value) {
+            if ($name === 'Set-Cookie') {
+                // Множественные Set-Cookie печатаются отдельными строками
+                // (replace=false); первый — уже в списке ниже.
+                continue;
+            }
             header($name . ': ' . $value, true);
+        }
+        if ($setCookies !== []) {
+            foreach ($setCookies as $cookie) {
+                header('Set-Cookie: ' . $cookie, false);
+            }
+        } elseif ($response->hasHeader('Set-Cookie')) {
+            header('Set-Cookie: ' . (string) $response->getHeaders()['Set-Cookie'], false);
         }
         echo $response->getBody();
     }

@@ -74,8 +74,9 @@ final class MaintenanceMiddleware implements MiddlewareInterface
     public function handle(RequestInterface $request, callable $next): object
     {
         $path = '/' . ltrim($request->getPath(), '/');
-        if ($path === '/admin' || str_starts_with($path, '/admin/')) {
-            return $next($request); // админка доступна всегда — включая maint-off
+        if ($path === '/admin' || str_starts_with($path, '/admin/')
+            || $path === '/system' || str_starts_with($path, '/system/')) {
+            return $next($request); // панель ядра доступна всегда — включая maint-off
         }
         if ($this->mode->blocksRequest($this->token($request))) {
             $state = $this->mode->state();

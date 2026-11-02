@@ -1,0 +1,53 @@
+<?php declare(strict_types=1); ?>
+<?php include __DIR__ . '/helpers.php'; ?>
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Вход · LEX SuperAdmin</title>
+<style>
+:root { --bg:#0d1117; --card:#161b22; --border:#30363d; --fg:#e6edf3; --muted:#848d97; --accent:#1f6feb; --danger:#f85149; }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif; display:flex; min-height:100vh; align-items:center; justify-content:center; }
+.box { width: 360px; max-width: 92vw; background: var(--card); border:1px solid var(--border); border-radius:8px; padding:28px; }
+h1 { font-size:18px; margin:0 0 4px; } p.sub { color:var(--muted); font-size:12px; margin:0 0 20px; }
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+input[type=text], input[type=password] { width:100%; padding:8px 10px; margin-bottom:14px; background:#010409; color:var(--fg); border:1px solid var(--border); border-radius:6px; font-size:14px; }
+button { width:100%; padding:9px; background:var(--accent); color:#fff; border:0; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; }
+button:hover { filter:brightness(1.1); }
+.err { background:rgba(248,81,73,.12); border:1px solid rgba(248,81,73,.4); color:var(--danger); border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:14px; }
+.warn { background:rgba(210,153,34,.12); border:1px solid rgba(210,153,34,.4); color:#d29922; border-radius:6px; padding:10px 12px; font-size:13px; margin-bottom:14px; }
+.lock { text-align:center; color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>LEX Engine · панель супер-администратора</h1>
+  <p class="sub">Системный доступ · вне сайтов и БД</p>
+
+  <?php if (($mode ?? '') === 'setup'): ?>
+    <div class="warn">
+      Ключ супер-админа не настроен. Выполните на сервере:<br>
+      <code style="color:#79c0ff">php bin/console.php admin:passwd --login=admin</code>
+    </div>
+  <?php elseif (($mode ?? '') === 'locked'): ?>
+    <div class="lock">
+      Вход временно заблокирован по IP после серии неудачных попыток.<br>
+      Повторите через <strong><?= $esc((string) ($retryIn ?? '?')) ?></strong> с.
+    </div>
+  <?php else: ?>
+    <?php if (!empty($error)): ?><div class="err"><?= $esc((string) $error) ?></div><?php endif; ?>
+    <?php if (!empty($flash)): ?><div class="warn"><?= $esc((string) $flash) ?></div><?php endif; ?>
+    <form method="post" action="<?= $esc((string) ($action ?? '')) ?>">
+      <input type="hidden" name="_token" value="<?= $esc((string) ($csrf ?? '')) ?>">
+      <label for="login">Логин</label>
+      <input type="text" id="login" name="login" autocomplete="username" required>
+      <label for="password">Пароль</label>
+      <input type="password" id="password" name="password" autocomplete="current-password" required>
+      <button type="submit">Войти</button>
+    </form>
+  <?php endif; ?>
+</div>
+</body>
+</html>

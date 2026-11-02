@@ -26,3 +26,6 @@ sites/*/storage/views/*
 sites/*/storage/uploads/*
 !sites/*/storage/uploads/.gitkeep
 sites/*/storage/framework/
+
+# Ключ супер-админа ядра и lockout-состояния (никогда не коммитятся)
+system/

@@ -68,65 +68,80 @@ if (!function_exists('lex_adm_bool_badge')) {
         return $loaded ? 'ok' : 'muted';
     }
 }
-/** CSS-переменная цвета по статусу health (белый список — safe для jail-детектора §40). */
-function lex_adm_css_var(string $status): string
-{
-    return match ($status) {
-        'ok' => 'success',
-        'fail' => 'danger',
-        default => 'attention',
-    };
-}
-/** Строгое целое как строка — safe для вывода через $esc(). */
-function lex_adm_int(mixed $v): string
-{
-    return (string) (int) $v;
-}
-/** CSS-класс бейджа по HTTP-методу маршрута (белый список). */
-function lex_adm_method_class(string $method): string
-{
-    return match (strtoupper($method)) {
-        'GET' => 'info',
-        'POST' => 'done',
-        'PUT', 'PATCH' => 'attention',
-        'DELETE' => 'fail',
-        default => 'muted',
-    };
-}
-
-/** CSS-класс полосы заполненности диска по проценту (белый список). */
-function lex_adm_bar_class(float $pct): string
-{
-    return $pct > 90 ? 'fail' : ($pct > 75 ? 'warn' : 'ok');
-}
-
-/** Бейдж статуса наличия .env файла сайта. */
-function lex_adm_env_badge(string $envInfo): string
-{
-    return str_contains($envInfo, 'ОТСУТ') ? 'fail' : 'ok';
-}
-
-/** Load average: null -> «—», иначе форматированная строка (safe для $esc). */
-function lex_adm_load_str(mixed $load): string
-{
-    if ($load === null) {
-        return '—';
+if (!function_exists('lex_adm_css_var')) {
+    /** CSS-переменная цвета по статусу health (белый список — safe для jail-детектора §40). */
+    function lex_adm_css_var(string $status): string
+    {
+        return match ($status) {
+            'ok' => 'success',
+            'fail' => 'danger',
+            default => 'attention',
+        };
     }
-    return lex_adm_load((array) $load);
 }
-/** Бейдж «ok|fail» по наличию подстроки ОТСУТ в описании (env/config статусы). */
-function lex_adm_presence_badge(string $info): string
-{
-    return str_contains($info, 'ОТСУТ') ? 'fail' : 'ok';
+if (!function_exists('lex_adm_int')) {
+    /** Строгое целое как строка — safe для вывода через $esc(). */
+    function lex_adm_int(mixed $v): string
+    {
+        return (string) (int) $v;
+    }
 }
-
-/** Бейдж display_errors: «1» — плохо (warn), иначе ok. */
-function lex_adm_flag_badge(mixed $value): string
-{
-    return strtolower((string) $value) === '1' ? 'warn' : 'ok';
+if (!function_exists('lex_adm_method_class')) {
+    /** CSS-класс бейджа по HTTP-методу маршрута (белый список). */
+    function lex_adm_method_class(string $method): string
+    {
+        return match (strtoupper($method)) {
+            'GET' => 'info',
+            'POST' => 'done',
+            'PUT', 'PATCH' => 'attention',
+            'DELETE' => 'fail',
+            default => 'muted',
+        };
+    }
 }
-/** Бейдж по булеву флагу: true -> ok, false -> fail. */
-function lex_adm_bool_badge(mixed $flag): string
-{
-    return $flag ? 'ok' : 'fail';
+if (!function_exists('lex_adm_bar_class')) {
+    /** CSS-класс полосы заполненности диска по проценту (белый список). */
+    function lex_adm_bar_class(float $pct): string
+    {
+        return $pct > 90 ? 'fail' : ($pct > 75 ? 'warn' : 'ok');
+    }
+}
+if (!function_exists('lex_adm_env_badge')) {
+    /** Бейдж статуса наличия .env файла сайта. */
+    function lex_adm_env_badge(string $envInfo): string
+    {
+        return str_contains($envInfo, 'ОТСУТ') ? 'fail' : 'ok';
+    }
+}
+if (!function_exists('lex_adm_load')) {
+    /** Load average как форматированная строка (safe для $esc). */
+    function lex_adm_load(array $load): string
+    {
+        $parts = array_map(static fn ($v): string => number_format((float) $v, 2), $load);
+        return $parts === [] ? '—' : implode(' · ', $parts);
+    }
+}
+if (!function_exists('lex_adm_load_str')) {
+    /** Load average: null -> «—», иначе форматированная строка (safe для $esc). */
+    function lex_adm_load_str(mixed $load): string
+    {
+        if ($load === null) {
+            return '—';
+        }
+        return lex_adm_load((array) $load);
+    }
+}
+if (!function_exists('lex_adm_presence_badge')) {
+    /** Бейдж «ok|fail» по наличию подстроки ОТСУТ в описании (env/config статусы). */
+    function lex_adm_presence_badge(string $info): string
+    {
+        return str_contains($info, 'ОТСУТ') ? 'fail' : 'ok';
+    }
+}
+if (!function_exists('lex_adm_flag_badge')) {
+    /** Бейдж display_errors: «1» — плохо (warn), иначе ok. */
+    function lex_adm_flag_badge(mixed $value): string
+    {
+        return strtolower((string) $value) === '1' ? 'warn' : 'ok';
+    }
 }

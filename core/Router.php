@@ -41,6 +41,41 @@ final class Router implements RouterInterface
      */
     private array $trailingSlashAliases = [];
 
+    /** Системный путь панели ядра (зарезервирован за AdminModule, §8.4). */
+    private const PANEL_PATH = '/system/superadminpanel';
+
+    /** Маркер fallback-результата для отладочных логов/тестов. */
+    public const PANEL_FALLBACK_PATTERN = self::PANEL_PATH . '#guard-fallback';
+
+    /**
+     * Зарезервирован ли путь за панелью и свободен ли слот (модуль не
+     * зарегистрировал собственный маршрут на этот метод+путь)? Точные пути
+     * входа (login/logout) и корень панели — легитимные цели fallback;
+     * произвольные /system/superadminpanel/<что-то> без маршрута модуля
+     * тоже ведут к guard'у: он решит, 401 (нет сессии) или 404 (сессия есть).
+     */
+    private function isPanelFallbackEligible(string $method, string $path): bool
+    {
+        if ($path !== self::PANEL_PATH && !str_starts_with($path, self::PANEL_PATH . '/')) {
+            return false; // вне пространства панели — обычный 404 сайта
+        }
+        $key = $method . '|' . $path;
+        if (isset($this->exactIndex[$key])) {
+            return false; // живой маршрут модуля имеет приоритет
+        }
+        foreach ($this->routes as $routeMethod => $list) {
+            if ($routeMethod !== $method) {
+                continue;
+            }
+            foreach ($list as $route) {
+                if ($route['regex'] !== null && preg_match((string) $route['regex'], $path) === 1) {
+                    return false; // совпал шаблонный маршрут модуля
+                }
+            }
+        }
+        return true;
+    }
+
     public function add(string $method, string $pattern, callable $handler, array $middleware = []): void
     {
         $method = strtoupper(trim($method));
@@ -138,6 +173,23 @@ final class Router implements RouterInterface
                     $allowed[$routeMethod] = true;
                 }
             }
+        }
+
+        // 2b. Панель ядра: префикс /system/superadminpanel зарезервирован за
+        //     AdminModule на ЛЮБОМ хосте и при любом состоянии bootstrap сайта.
+        //     Если модуль не сумел зарегистрировать маршруты (unknown-host,
+        //     отсутствие sites/<домен>/config/, ошибка boot) — запрос всё равно
+        //     доходит до system middleware: SuperAdminGuardMiddleware (§8.4) без
+        //     сессии отдаёт встроенную страницу входа, а с валидной сессией —
+        //     корректный 404. Так панель физически не может исчезнуть с
+        //     произвольного домена (требование: работает на любом хосте).
+        if ($this->isPanelFallbackEligible($method, $path)) {
+            return RouteResult::found(
+                static fn (): Response => Response::html('', 404),
+                [],
+                [],
+                self::PANEL_FALLBACK_PATTERN,
+            );
         }
 
         // 3. Путь существует, но метод не тот → 405. Раздел 2 сканирует ВСЕ

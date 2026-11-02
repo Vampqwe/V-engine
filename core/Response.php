@@ -13,6 +13,9 @@ final class Response
     /** @var array<string, string> Заголовки: имя => значение (канонический вид). */
     private array $headers = [];
 
+    /** @var string[] Все Set-Cookie строки (заголовок может повторяться — RFC 6265). */
+    private array $setCookieHeaders = [];
+
     public function __construct(
         private int $status = 200,
         private string $body = '',
@@ -88,10 +91,40 @@ final class Response
         return $clone;
     }
 
+    /**
+     * Добавить заголовок, НЕ затирая уже выставленный с тем же именем.
+     * Нужно для Set-Cookie: HTTP допускает несколько строк этого заголовка
+     * (например, SID-кука и LEX_SUPERADMIN выдаются в одном ответе).
+     */
+    public function withAddedHeader(string $name, string $value): self
+    {
+        $clone = clone $this;
+        $key = self::canonicalName($name);
+        if ($key === 'Set-Cookie') {
+            // Множественные куки живут в специальном списке (send() печатает
+            // их отдельными header(..., false) строками).
+            $clone->setCookieHeaders[] = $value;
+            if (!isset($clone->headers[$key])) {
+                $clone->headers[$key] = $value; // совместимость getHeaders()
+            }
+            return $clone;
+        }
+        $clone->headers[$key] = ($clone->headers[$key] ?? '') !== ''
+            ? $clone->headers[$key] . ', ' . $value
+            : $value;
+        return $clone;
+    }
+
     /** @return array<string, string> */
     public function getHeaders(): array
     {
         return $this->headers;
+    }
+
+    /** @return string[] все Set-Cookie строки ответа (в порядке выдачи) */
+    public function getSetCookieHeaders(): array
+    {
+        return $this->setCookieHeaders;
     }
 
     private static function canonicalName(string $name): string

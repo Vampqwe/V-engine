@@ -45,6 +45,8 @@ foreach ($args as $arg) {
         print_usage(0);
     } elseif ($command === null && !str_starts_with($arg, '-')) {
         $command = $arg;
+    } elseif ($command !== null && str_starts_with($arg, '--')) {
+        continue; // именованные опции команд (--login=, --password=, ...)
     } else {
         fwrite(STDERR, "Unknown argument: {$arg}\n");
         print_usage(2);
@@ -119,6 +121,9 @@ switch ($command) {
     case 'doctor':
         $exitCode = runDoctor($kernel);
         break;
+    case 'admin:passwd':
+        $exitCode = runAdminPasswd($args);
+        break;
     default:
         fwrite(STDERR, "Unknown command: {$command}\n");
         print_usage(2);
@@ -128,6 +133,45 @@ exit($exitCode);
 // ==============================================================================
 // Реализации команд
 // ==============================================================================
+
+/**
+ * admin:passwd — создать/обновить ключ супер-админа ядра (system/admin.key).
+ * Единственный способ завести учётку панели: дефолтных паролей не существует.
+ * Пароль: --password=... или интерактивный ввод (STDIN, без echo).
+ */
+function runAdminPasswd(array $args): int
+{
+    $login = null;
+    $password = null;
+    foreach ($args as $arg) {
+        if (str_starts_with($arg, '--login=')) {
+            $login = substr($arg, 8);
+        } elseif (str_starts_with($arg, '--password=')) {
+            $password = substr($arg, 11);
+        }
+    }
+    if ($login === null || $login === '') {
+        fwrite(STDOUT, 'Login [superadmin]: ');
+        $line = fgets(STDIN);
+        $login = trim($line === false ? '' : $line) ?: 'superadmin';
+    }
+    if ($password === null || $password === '') {
+        @shell_exec('stty -echo 2>/dev/null'); // best-effort скрытие ввода в TTY
+        fwrite(STDOUT, 'Password (min 8 chars): ');
+        $line = fgets(STDIN);
+        $password = $line === false ? '' : rtrim($line, "\r\n");
+        @shell_exec('stty echo 2>/dev/null');
+        fwrite(STDOUT, "\n");
+    }
+    try {
+        \Core\Module\Admin\SuperAdminAuth::writeKey((string) $login, (string) $password);
+    } catch (\Throwable $e) {
+        fwrite(STDERR, 'admin:passwd FAILED: ' . $e->getMessage() . "\n");
+        return 1;
+    }
+    fwrite(STDOUT, "OK: key written to " . \Core\Module\Admin\SuperAdminAuth::keyFilePath() . " (Argon2id, chmod 0600)\n");
+    return 0;
+}
 
 /**
  * doctor — самодиагностика сайта (§7.2). Агрегирует HealthCheck всех поднятых
@@ -293,6 +337,7 @@ Commands:
   queue:status    Show pending/failed job counts
   scheduler:run   Fire all jobs due at this minute (cron-safe, idempotent)
   doctor          Site self-diagnostics (HealthCheck aggregation, exit 1 on fail)
+  admin:passwd    Create/update super-admin key (system/admin.key, Argon2id; --login= --password=)
   migrate         Run pending migrations (--site=<domain>)
   migrate:status  List applied/pending migrations
   migrate:rollback Rollback last batch (--steps=N)

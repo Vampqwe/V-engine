@@ -118,7 +118,10 @@ try {
         register_demo_routes($kernel, $router, $config);
     }
 
-    $request = Request::fromServer($_SERVER, $_GET, $_POST, $_FILES);
+    $request = Request::fromServer($_SERVER, $_GET, $_POST, $_FILES)
+        // IP клиента — атрибут ядра: нужен guard-приводу панели (file-lockout),
+        // суперглобалы за пределами fromServer() не читаются (§4).
+        ->withAttribute('client.ip', (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
     $response = $kernel->run($request);
 } catch (\Throwable $e) {
     // Ядро загрузилось, но упало до/во время boot(): сырое исключение наружу

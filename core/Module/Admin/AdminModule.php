@@ -315,9 +315,28 @@ final class AdminModule implements ModuleInterface
     // =========================================================================
 
     /**
-     * Панель доступна всегда (это инструмент ядра), но в продакшене без
-     * CORE_DEBUG вход в неё закрыт — чтобы не экспонировать внутренности
-     * движка наружу. Отключить полностью: 'admin.enabled' => false в config/core.php.
+     * IP клиента из контракта Request (без чтения суперглобалов вне ядра):
+     * REMOTE_ADDR кладётся в атрибут 'client.ip' на этапе построения запроса.
+     */
+    private function clientIp(RequestInterface $request): string
+    {
+        $ip = $request->getAttribute('client.ip');
+        return is_string($ip) ? $ip : '';
+    }
+
+    /** Куда вести после входа: сохраняем пространство путей (system vs legacy). */
+    private function panelHome(RequestInterface $request): string
+    {
+        $p = '/' . ltrim($request->getPath(), '/');
+        $prefix = str_starts_with($p, self::PATH) ? self::PATH : self::SYSTEM_PATH;
+        return $prefix . '/';
+    }
+
+    /**
+     * Панель доступна всегда (это инструмент ядра), но её можно полностью
+     * закрыть конфигом: 'admin' => ['enabled' => false] в config/core.php.
+     * Аутентификация супер-админа (SuperAdminGuardMiddleware) при этом —
+     * единственный ключ доступа; guard не имеет «мастер-обхода».
      */
     private function guardDebug(KernelInterface $kernel): void
     {

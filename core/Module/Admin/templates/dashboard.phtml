@@ -74,7 +74,7 @@ $mods   = $stats['modules'] ?? [];
 
 <div class="grid cols-2" style="margin-bottom:16px">
   <div class="card">
-    <div class="card-h">Здоровье: последние проверки <a href="/admin/health">все →</a></div>
+    <div class="card-h">Здоровье: последние проверки <a href="<?= $esc((string) ($base ?? '/admin')) ?>/health">все →</a></div>
     <?php $checks = array_slice((array) ($stats['health']['checks'] ?? []), 0, 8); ?>
     <?php if ($checks === []): ?><div class="empty">Doctor не вернул проверок.</div><?php else: ?>
     <table class="data">
@@ -92,23 +92,23 @@ $mods   = $stats['modules'] ?? [];
   <div class="card">
     <div class="card-h">Быстрые действия <span class="hint">CSRF-защищены (§9)</span></div>
     <div class="card-b">
-      <form method="post" action="/admin/actions/clear-cache" class="inline">
+      <form method="post" action="<?= $esc((string) ($base ?? '/admin')) ?>/actions/clear-cache" class="inline">
         <input type="hidden" name="_token" value="<?= $esc($csrf ?? '') ?>">
         <button class="btn" type="submit">🧹 Очистить кэш</button>
       </form>
       <?php if (!empty($stats['maintenance']['active'])): ?>
-      <form method="post" action="/admin/actions/maintenance/off" class="inline">
+      <form method="post" action="<?= $esc((string) ($base ?? '/admin')) ?>/actions/maintenance/off" class="inline">
         <input type="hidden" name="_token" value="<?= $esc($csrf ?? '') ?>">
         <button class="btn success" type="submit">✅ Выключить техобслуживание</button>
       </form>
       <?php else: ?>
-      <form method="post" action="/admin/actions/maintenance/on" class="inline">
+      <form method="post" action="<?= $esc((string) ($base ?? '/admin')) ?>/actions/maintenance/on" class="inline">
         <input type="hidden" name="_token" value="<?= $esc($csrf ?? '') ?>">
         <button class="btn danger" type="submit">🚧 Включить техобслуживание</button>
       </form>
       <?php endif; ?>
       <p style="color:var(--fg-muted);margin-top:12px;font-size:12px">
-        Все подсистемы ядра доступны из единого JSON-среза: <a href="/admin/api/stats" class="mono">/admin/api/stats</a>
+        Все подсистемы ядра доступны из единого JSON-среза: <a href="<?= $esc((string) ($base ?? '/admin')) ?>/api/stats" class="mono">/admin/api/stats</a>
       </p>
     </div>
   </div>

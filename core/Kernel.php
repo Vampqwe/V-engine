@@ -370,7 +370,10 @@ final class Kernel implements KernelInterface
             if ($secure) {
                 $parts[] = 'Secure';
             }
-            $response = $response->withHeader('Set-Cookie', implode('; ', $parts));
+            // withAddedHeader, а не withHeader: обработчик мог уже выдать
+            // Set-Cookie (например, LEX_SUPERADMIN при входе супер-админа) —
+            // перетирать его нельзя, HTTP допускает несколько строк Set-Cookie.
+            $response = $response->withAddedHeader('Set-Cookie', implode('; ', $parts));
         }
 
         return $response;
@@ -599,8 +602,21 @@ final class Kernel implements KernelInterface
     public function send(Response $response): void
     {
         http_response_code($response->getStatusCode());
+        $setCookies = $response->getSetCookieHeaders();
         foreach ($response->getHeaders() as $name => $value) {
+            if ($name === 'Set-Cookie') {
+                // Множественные Set-Cookie печатаются отдельными строками
+                // (replace=false); первый — уже в списке ниже.
+                continue;
+            }
             header($name . ': ' . $value, true);
+        }
+        if ($setCookies !== []) {
+            foreach ($setCookies as $cookie) {
+                header('Set-Cookie: ' . $cookie, false);
+            }
+        } elseif ($response->hasHeader('Set-Cookie')) {
+            header('Set-Cookie: ' . (string) $response->getHeaders()['Set-Cookie'], false);
         }
         echo $response->getBody();
     }

@@ -197,7 +197,7 @@ final class AdminModule implements ModuleInterface
                 $redirect = $this->panelHome($request);
                 return Response::text('', 302)
                     ->withHeader('Location', $redirect)
-                    ->withHeader(
+                    ->withAddedHeader(
                         'Set-Cookie',
                         SuperAdminAuth::COOKIE_NAME . '=' . $token
                         . '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' . (2 * 3600),
@@ -211,7 +211,7 @@ final class AdminModule implements ModuleInterface
                 }
                 return Response::text('', 302)
                     ->withHeader('Location', $prefix . '/login')
-                    ->withHeader(
+                    ->withAddedHeader(
                         'Set-Cookie',
                         SuperAdminAuth::COOKIE_NAME . '=deleted; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
                     );

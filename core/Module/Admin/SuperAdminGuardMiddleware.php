@@ -75,7 +75,7 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
                 $token = $fallback->issueToken();
                 return Response::text('', 302)
                     ->withHeader('Location', $this->panelHome($request))
-                    ->withHeader(
+                    ->withAddedHeader(
                         'Set-Cookie',
                         SuperAdminAuth::COOKIE_NAME . '=' . $token
                         . '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' . (2 * 3600),
@@ -84,7 +84,7 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             if ($this->logoutEntry($path)) {
                 return Response::text('', 302)
                     ->withHeader('Location', $this->prefixOf($path) . '/login')
-                    ->withHeader(
+                    ->withAddedHeader(
                         'Set-Cookie',
                         SuperAdminAuth::COOKIE_NAME . '=deleted; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
                     );

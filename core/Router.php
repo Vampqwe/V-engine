@@ -140,30 +140,18 @@ final class Router implements RouterInterface
             }
         }
 
-        // 3. Путь существует, но метод не тот → 405 (точечные маршруты тоже учтём).
-        if ($allowed === []) {
-            foreach ($this->exactRoutes[$path] ?? [] as $routeKey) {
+        // 3. Путь существует, но метод не тот → 405. Раздел 2 сканирует ВСЕ
+        //    методы (включая точные маршруты с regex === null), поэтому сюда
+        //    мы попадаем только когда ни один маршрут любого метода не совпал.
+        //    Единственное оставшееся исключение — хвостовой слэш: запрос
+        //    «/form/» обязан получать тот же 405, что и «/form» (точные
+        //    маршруты хранятся без слэша, а normalizePath его сохраняет).
+        if ($allowed === [] && $path !== '/' && str_ends_with($path, '/')) {
+            $slashless = rtrim($path, '/');
+            foreach ($this->exactRoutes[$slashless] ?? [] as $routeKey) {
                 [$routeMethod] = explode('#', $routeKey, 2);
                 if ($routeMethod !== $method) {
                     $allowed[$routeMethod] = true;
-                }
-            }
-            // Маршрут-шаблон может «накрывать» запрошенный путь более длинным
-            // префиксом: /form подпадает под /form/{id} (PUT, PATCH). Собираем
-            // допустимые методы и таких шаблонов — иначе вместо 405 отдаём 404.
-            if ($allowed === []) {
-                foreach ($this->routes as $routeMethod => $list) {
-                    if ($routeMethod === $method) {
-                        continue;
-                    }
-                    foreach ($list as $route) {
-                        if ($route['regex'] === null) {
-                            continue;
-                        }
-                        if (preg_match($route['regex'], $path) === 1) {
-                            $allowed[$routeMethod] = true;
-                        }
-                    }
                 }
             }
         }

@@ -53,11 +53,19 @@ final class Config implements ConfigInterface
         // (непустые) значения НЕ перекрываются файлом сайта — иначе APP_SECRET
         // из process-env игнорировался бы и boot падал с SecurityException
         // («APP_SECRET is missing»), что на хостинге выглядит как ошибка ядра.
+        //
+        // Белый список префиксов: в процессном окружении живёт десятки
+        // служебных переменных (PATH, HOME, TERM, TMUX_PANE, SHELL levels…),
+        // которые не являются конфигурацией приложения. Маппинг «всё, что
+        // похоже на UPPER_SNAKE» в конфиг превращал бы их в секции ('shell',
+        // 'term', 'pwd', 'home' …) и протекал бы в all()/экспорт
+        // DataPortability. Конфигурация движка и сайтов использует только
+        // префиксы ниже (+ точечные ключи без подчёркиваний).
         $processVars = [];
         foreach ([getenv(), $_ENV, $_SERVER] as $source) {
             foreach ((array) $source as $name => $raw) {
-                if (!is_string($name) || !preg_match('/^[A-Z][A-Z0-9_]*$/', $name)) {
-                    continue; // отсеем HTTP_*, REQUEST_*, SCRIPT_FILENAME и прочий мусор
+                if (!is_string($name) || !self::isAppEnvName($name)) {
+                    continue; // отсеем HTTP_*, REQUEST_*, PATH/HOME/TMUX_* и прочий мусор
                 }
                 $value = is_scalar($raw) ? trim((string) $raw) : '';
                 if ($value !== '') {

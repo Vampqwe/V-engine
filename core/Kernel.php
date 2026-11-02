@@ -358,16 +358,22 @@ final class Kernel implements KernelInterface
         // ядро само выпускает Set-Cookie (HttpOnly+SameSite=Lax; Secure — на https).
         // Иначе CSRF-токен, записанный в сессию при рендере, терялся бы на каждом
         // запросе, и любое POST-действие падало бы с 403.
-        // Условие !hasCookie($name) вместо !hasIncomingId(): ответ мог содержать
-        // собственный Set-Cookie SID (regenerate() в login/rotate потоках) — тогда
-        // повторная выдача «старого» сида перезаписала бы новый (гонка куков) и
-        // токен формы осиротел бы. Если же обработчик просто прочитал cookie без
-        // ротации — куки в ответе нет, и выпускать SID не нужно (§9).
+        // Условие startedWithoutCookie(): SID выпускается ТОЛЬКО когда экземпляр
+        // создан без валидной куки клиента — именно тогда токен формы лёг в новую
+        // сессию и без Set-Cookie осиротеет. Раньше условие звучало как
+        // «в ответе нет Set-Cookie SID», и при валидной куке ядро заново
+        // выпускало её же (шум + лишняя запись). Ответ с собственным
+        // Set-Cookie SID (regenerate() в login/rotate потоках) содержит
+        // hasCookie()==true — повторная выдача «старого» сида перезаписала бы
+        // новый (гонка куков), поэтому такой случай отсекаем первым.
         // Разрешение берётся напрямую из factory (protect): container->get()
         // создал бы новую сессию со свежим сидом, и выданный SID не совпал бы
         // с тем, в котором реально лежит CSRF-токен.
         $session = $this->resolveBootSession();
-        if ($session instanceof NativeSession && !$response->hasCookie($session->getCookieName())) {
+        if ($session instanceof NativeSession
+            && $session->startedWithoutCookie()
+            && !$response->hasCookie($session->getCookieName())
+        ) {
             $secure = str_starts_with((string) $this->container->get(SiteContextInterface::class)->getBaseUrl(), 'https://');
             $parts = [
                 $session->getCookieName() . '=' . $session->id(),

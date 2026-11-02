@@ -114,6 +114,16 @@ final class NativeSession implements SessionInterface
     // Internals
     // =========================================================================
 
+    /**
+     * Был ли экземпляр создан с валидной кукой клиента. Ядро использует это для
+     * решения «нужно ли выпускать Set-Cookie SID»: если куки не было, токен
+     * (например, CSRF) записан в НОВУЮ сессию и без Set-Cookie осиротеет (§9).
+     */
+    public function startedWithoutCookie(): bool
+    {
+        return !$this->incomingValid;
+    }
+
     /** Есть ли валидный входящий SID из cookie (иначе слой Cookie ставит новый). */
     public function hasIncomingId(): bool
     {

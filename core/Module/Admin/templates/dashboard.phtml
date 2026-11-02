@@ -118,7 +118,7 @@ $mods   = $stats['modules'] ?? [];
   <div class="card-h">Модули ядра <span class="hint"><?= $esc(lex_adm_int(count($mods))) ?> шт · порядок загрузки слева направо</span></div>
   <div class="card-b"><div class="chips">
     <?php foreach ($mods as $m): ?>
-      <span class="badge <?= empty($m['missing']) ? 'ok' : 'fail' ?>" title="v<?= $esc($m['version']) ?> · провайдер: <?= $esc(implode(', ', (array) ($m['provides'] ?? []))) ?>">
+      <span class="badge <?= $esc(lex_adm_bool_badge(empty($m['missing']))) ?>" title="v<?= $esc($m['version']) ?> · провайдер: <?= $esc(implode(', ', (array) ($m['provides'] ?? []))) ?>">
         <?= $esc(lex_adm_int(($m['boot_order'] ?? 0))) ?>. <?= $esc($m['name']) ?>
       </span>
     <?php endforeach; ?>

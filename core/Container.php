@@ -118,6 +118,19 @@ final class Container implements ContainerInterface
     }
 
     /**
+     * Сбросить резолвы protect()-синглтонов (пер-запросовые сервисы: Session).
+     * Вызывается ядром в начале каждого run(): экземпляр, созданный в прошлом
+     * запросе того же контейнера, не должен переиспользоваться — его состояние
+     * (SID, данные) привязано к тому запросу и его кукам.
+     */
+    public function resetProtected(): void
+    {
+        foreach (array_keys($this->protectedResolved) as $id) {
+            unset($this->instances[$id], $this->protectedResolved[$id]);
+        }
+    }
+
+    /**
      * Возвращает зарегистрированную фабрику сервиса без резолва и кеширования.
      * Используется ядром (Session Set-Cookie слой в Kernel), чтобы получить
      * тот же пер-запросовый экземпляр, что создаёт protect()-фабрика.
@@ -159,7 +172,13 @@ final class Container implements ContainerInterface
                 $this->instances[$id] = $object;
             }
             if (isset($this->protected[$id]) && $object instanceof object) {
+                // Двойная запись: protectedResolved — реестр ядра, instances —
+                // общий кеш get(). Без второй строки последующие get() проходили
+                // бы мимо protectedResolved и создавали НОВЫЙ экземпляр (например,
+                // NativeSession со свежим сидом), а Set-Cookie слой Kernel'а по
+                // protectedInstance() видел бы только первый — CSRF-токен терялся.
                 $this->protectedResolved[$id] = $object;
+                $this->instances[$id] = $object;
             }
             return $object;
         }

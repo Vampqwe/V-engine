@@ -127,6 +127,21 @@ final class Response
         return $this->setCookieHeaders;
     }
 
+    /**
+     * Выдан ли в этом ответе Set-Cookie с указанным именем? Используется ядром,
+     * чтобы не перетирать SID-куку обработчика (regenerate) своей выдачей (§9).
+     */
+    public function hasCookie(string $name): bool
+    {
+        $needle = strtolower(trim($name)) . '=';
+        foreach ($this->setCookieHeaders as $cookie) {
+            if (str_starts_with(strtolower($cookie), $needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static function canonicalName(string $name): string
     {
         return implode('-', array_map(

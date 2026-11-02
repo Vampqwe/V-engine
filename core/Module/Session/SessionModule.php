@@ -66,12 +66,32 @@ final class SessionModule implements ModuleInterface
         // в один экземпляр, не увидит Set-Cookie-слой, читающий другой).
         $cached = null;
 
-        $factory = static function () use (&$cached, $driver, $dir, $cookieName, $storage, $config): NativeSession {
+        $factory = static function () use (&$cached, $driver, $dir, $cookieName, $storage, $config, $container): NativeSession {
             if ($cached instanceof NativeSession) {
                 return $cached;
             }
             $fileStore = new FileSessionStore($storage, $dir . '/sess_');
-            $incoming = self::incomingSid($cookieName);
+            // SID из куки ТЕКУЩЕГО запроса через контракт Request (атрибут
+            // 'session.sid' кладёт Kernel::run). $_COOKIE не читаем: php -S /
+            // fastcgi-переиспользование воркера оставляет в суперглобалке куку
+            // прошлого запроса — сессия «прилипала» к первому клиенту, а новый
+            // Set-Cookie терялся и CSRF падал с 403 (§9). Атрибута нет (CLI,
+            // тесты, прямое обращение) — честный fallback на $_COOKIE.
+            $incoming = null;
+            if ($container->has(RequestInterface::class)) {
+                $req = $container->get(RequestInterface::class);
+                if ($req instanceof \Core\Request) {
+                    $sid = $req->getCookie($cookieName);
+                    $incoming = is_string($sid) && $sid !== '' ? $sid : null;
+                } elseif ($req instanceof RequestInterface) {
+                    $sidAttr = $req->getAttribute('session.sid');
+                    $incoming = is_string($sidAttr) && $sidAttr !== '' ? $sidAttr : null;
+                }
+            }
+            if ($incoming === null) {
+                $sid = $_COOKIE[$cookieName] ?? null;
+                $incoming = is_string($sid) ? $sid : null;
+            }
 
             if ($driver === 'redis') {
                 $redis = RedisSessionStore::tryConnect(
@@ -102,13 +122,5 @@ final class SessionModule implements ModuleInterface
         };
 
         $container->protect(SessionInterface::class, $factory);
-    }
-
-    /** SID из cookie: $_COOKIE читается через php://input? Нет — из суперглобалки,
-     *  но только CLI/тесты могут передать её напрямую. */
-    private static function incomingSid(string $cookieName): ?string
-    {
-        $sid = $_COOKIE[$cookieName] ?? null;
-        return is_string($sid) ? $sid : null;
     }
 }

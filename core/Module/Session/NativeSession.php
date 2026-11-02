@@ -42,6 +42,12 @@ final class NativeSession implements SessionInterface
         $this->sid = $this->incomingValid ? $incomingId : bin2hex(random_bytes(16));
     }
 
+    /** Есть ли уже запись сессии в хранилище для текущего SID. */
+    public function existsInStore(): bool
+    {
+        return $this->store->exists($this->sid);
+    }
+
     /** Установить имя cookie сессии (вызывается SessionModule при создании). */
     public function setCookieName(string $name): void
     {
@@ -107,6 +113,16 @@ final class NativeSession implements SessionInterface
     // =========================================================================
     // Internals
     // =========================================================================
+
+    /**
+     * Был ли экземпляр создан с валидной кукой клиента. Ядро использует это для
+     * решения «нужно ли выпускать Set-Cookie SID»: если куки не было, токен
+     * (например, CSRF) записан в НОВУЮ сессию и без Set-Cookie осиротеет (§9).
+     */
+    public function startedWithoutCookie(): bool
+    {
+        return !$this->incomingValid;
+    }
 
     /** Есть ли валидный входящий SID из cookie (иначе слой Cookie ставит новый). */
     public function hasIncomingId(): bool

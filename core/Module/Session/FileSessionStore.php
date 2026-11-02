@@ -48,6 +48,11 @@ final class FileSessionStore implements SessionStoreInterface
         }
     }
 
+    public function exists(string $id): bool
+    {
+        return $this->valid($id) && $this->storage->exists($this->path($id));
+    }
+
     public function isHealthy(): bool
     {
         // Запись тестового ключа и его удаление — единственная честная проверка.

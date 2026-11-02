@@ -27,21 +27,69 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
      *        (панель в режиме «настрой меня»: публичные страницы тоже закрыты,
      *        кроме login — там показывается CLI-подсказка).
      * @param string[] $prefixes префиксы защищённого пространства
+     * @param callable|null $liveAuthResolver ленивый доступ к аутентификатору
+     *        контейнера: guard-привод unknown-host отличает «модуль поднялся и
+     *        сам обработает POST /login» от «хендлера нет — отвечать здесь».
      */
+    /** @var self|null Экземпляр guard-привода, обслуживающий текущий запрос (для резолва CSRF из контейнера). */
+    private static ?self $serving = null;
+
     public function __construct(
         private readonly ?SuperAdminAuthenticatorInterface $auth,
         private readonly array $prefixes = [AdminModule::SYSTEM_PATH, AdminModule::PATH],
+        private readonly mixed $liveAuthResolver = null,
+        private readonly mixed $containerResolver = null,
     ) {
     }
 
+    /** Поднялся ли модуль панели на этом хосте (живой login-обработчик есть)? */
+    private function hasLiveAuth(): bool
+    {
+        if ($this->auth !== null) {
+            return true; // конструкторный auth — самый прямой признак
+        }
+        if (is_callable($this->liveAuthResolver)) {
+            try {
+                return ($this->liveAuthResolver)() instanceof SuperAdminAuthenticatorInterface;
+            } catch (\Throwable) {
+                return false; // диагностика не должна ронять guard (§31)
+            }
+        }
+        return false;
+    }
+
     public function handle(RequestInterface $request, callable $next): object
+    {
+        self::$serving = $this; // guard обслуживает запрос: loginPage() резолвит CSRF из его контейнера
+        try {
+            return $this->handleInner($request, $next);
+        } finally {
+            self::$serving = null;
+        }
+    }
+
+    private function handleInner(RequestInterface $request, callable $next): object
     {
         $path = '/' . ltrim($request->getPath(), '/');
         if (!$this->isSystemPath($path)) {
             return $next($request); // вне пространства панели — не мешаем
         }
         if ($this->isPublicEntry($path)) {
-            return $next($request); // login/logout доступны без сессии
+            // login/logout доступны без сессии. GET-страницу логина трогать
+            // нельзя: живой маршрут должен отрендериться (и создать сессионный
+            // экземпляр), чтобы ядро выпустило Set-Cookie SID — иначе CSRF-токен
+            // формы теряется и любой POST падает с 403 (§9). А вот POST /login
+            // на живой маршрут вести бессмысленно, когда панели нет (unknown-
+            // host): хендлер не зарегистрирован → 404 вместо формы с ошибкой.
+            // Поэтому невалидный POST пропускаем дальше только если в контейнере
+            // есть живой аутентификатор (значит, модуль поднялся и обработает).
+            if (strtoupper($request->getMethod()) === 'POST'
+                && $this->loginEntry($path)
+                && !$this->hasLiveAuth()) {
+                // fallthrough: ниже сработает guard-привод unknown-host
+            } else {
+                return $next($request);
+            }
         }
         if ($this->auth !== null && $this->auth->validateToken($this->cookie($request))) {
             return $next($request); // сессия супер-админа валидна
@@ -252,6 +300,49 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
     }
 
     /**
+     * CSRF-токен для fallback-формы входа (режим unknown-host, когда живой
+     * маршрут AdminModule не зарегистрирован). Строится напрямую через
+     * SessionInterface + SecurityInterface контейнера — тот же сессионный
+     * экземпляр, что резолвит ядро в Kernel::run() для Set-Cookie SID (§9).
+     * Контейнер берётся из resolver'а, переданного при регистрации guard'а
+     * (AdminModule::boot); без него (чистый unit-тест) возвращает null:
+     * форма остаётся без токена, а приём логина честно отклоняется.
+     */
+    private function csrfToken(): ?string
+    {
+        try {
+            $container = is_callable($this->containerResolver)
+                ? ($this->containerResolver)()
+                : self::$serving?->containerResolver();
+            if (!is_object($container)
+                || !method_exists($container, 'has')
+                || !method_exists($container, 'get')) {
+                return null;
+            }
+            if (!$container->has(\Core\Contract\SessionInterface::class)
+                || !$container->has(\Core\Contract\SecurityInterface::class)) {
+                return null;
+            }
+            // Сессия резолвится ПЕРВОЙ и кешируется protect()-фабрикой:
+            // Security получит exactly тот же NativeSession-экземпляр, чей SID
+            // потом выпустит ядро (Set-Cookie), иначе токен осиротеет (§9).
+            $container->get(\Core\Contract\SessionInterface::class);
+            $security = $container->get(\Core\Contract\SecurityInterface::class);
+            return $security instanceof \Core\Contract\SecurityInterface
+                ? $security->csrfToken()
+                : null;
+        } catch (\Throwable) {
+            return null; // диагностика формы не должна ронять guard (§31)
+        }
+    }
+
+    /** Резолв контейнера текущего guard-экземпляра (для static loginPage-контекста). */
+    private function containerResolver(): mixed
+    {
+        return $this->containerResolver;
+    }
+
+    /**
      * 401 + встроенная форма входа (без зависимости от View/Storage: guard
      * может вызываться и при недоступности шаблонов сайта). POST на тот же
      * префикс, что и запрос, — панель остаётся «в своём» пространстве путей.
@@ -282,6 +373,13 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             'locked' => '<p style="color:#f85149;font-size:13px;margin:0 0 14px">Слишком много попыток. Подождите и повторите.</p>',
             default => '',
         };
+        // CSRF (§9): форма приёма логина защищена токеном движка. Токен
+        // выпускается через SecurityInterface::csrfToken() — сессионный слой
+        // помечает экземпляр как «без куки», и ядро выпустит Set-Cookie SID
+        // (NativeSession::takeOrphanSession), иначе токен осиротеет → 403.
+        // При недоступности секретов (CORE_SECRET/APP_SECRET корень §31)
+        // страница остаётся без токена: приём логина тогда честно отклоняется.
+        $csrf = $this->csrfToken();
         $body = '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<title>401 · LEX SuperAdmin</title></head>'
@@ -293,6 +391,7 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             . '<p style="color:#848d97;font-size:12px;margin:0 0 16px">Системный доступ · вне сайтов и БД</p>'
             . ($error !== '' ? $error : '')
             . ($hint !== '' ? '<div style="margin-bottom:14px">' . $hint . '</div>' : '')
+            . ($csrf !== null ? '<input type="hidden" name="_token" value="' . htmlspecialchars($csrf, ENT_QUOTES) . '">' : '')
             . '<label style="display:block;font-size:12px;color:#848d97;margin-bottom:4px">Логин</label>'
             . '<input type="text" name="login" autocomplete="username" required style="width:100%;padding:8px 10px;margin-bottom:12px;background:#010409;color:#e6edf3;border:1px solid #30363d;border-radius:6px">'
             . '<label style="display:block;font-size:12px;color:#848d97;margin-bottom:4px">Пароль</label>'

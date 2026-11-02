@@ -59,6 +59,11 @@ final class RedisSessionStore implements SessionStoreInterface
         $this->redis->del($this->prefix . $id);
     }
 
+    public function exists(string $id): bool
+    {
+        return (bool) $this->redis->exists($this->prefix . $id);
+    }
+
     public function isHealthy(): bool
     {
         try {

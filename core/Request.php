@@ -30,6 +30,7 @@ final class Request implements RequestInterface
         private array $attributes,
         private array $routeParams,
         private readonly array $files = [],
+        private readonly array $cookies = [],
     ) {
     }
 
@@ -80,7 +81,21 @@ final class Request implements RequestInterface
             $headers['content-type'] = (string) $server['CONTENT_TYPE'];
         }
 
-        return new self($method, self::normalizePath($path), $query, $post, $headers, [], [], self::normalizeFiles($files));
+        // Куки: только из HTTP_COOKIE-заголовка (он же попадает в $headers как
+        // 'cookie'). $_COOKIE не используем намеренно: native session.autostart
+        // и сторонние инициализаторы не должны просачиваться в контракт.
+        $cookies = [];
+        $cookieHeader = $headers['cookie'] ?? '';
+        if ($cookieHeader !== '') {
+            foreach (explode(';', $cookieHeader) as $part) {
+                [$name, $value] = array_pad(explode('=', trim($part), 2), 2, '');
+                if ($name !== '') {
+                    $cookies[$name] = rawurldecode((string) $value);
+                }
+            }
+        }
+
+        return new self($method, self::normalizePath($path), $query, $post, $headers, [], [], self::normalizeFiles($files), $cookies);
     }
 
     /**
@@ -175,6 +190,23 @@ final class Request implements RequestInterface
     public function getPost(string $key, mixed $default = null): mixed
     {
         return $this->post[$key] ?? $default;
+    }
+
+    /**
+     * Кука запроса (из заголовка Cookie, см. fromServer). Метод вне контракта
+     * RequestInterface — доступен ядру через конкретный класс Core\Request
+     * (Session-слой читает SID именно здесь, а не из $_COOKIE: §4, суперглобалы
+     * читаются только в точке входа).
+     */
+    public function getCookie(string $name): ?string
+    {
+        return $this->cookies[$name] ?? null;
+    }
+
+    /** @return array<string, string> все куки запроса */
+    public function getCookies(): array
+    {
+        return $this->cookies;
     }
 
     public function getHeader(string $name): ?string

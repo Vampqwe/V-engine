@@ -313,6 +313,12 @@ final class Kernel implements KernelInterface
         $logger = $this->container->get(LoggerInterface::class);
         assert($logger instanceof LoggerInterface);
 
+        // Пер-запросовый сброс protect()-синглтонов ядра (Session и др.): иначе
+        // второй run() на том же контейнере переиспользовал бы сессию первого
+        // запроса — с чужим SID и «осиротевшим» CSRF-токеном. Клиентские куки
+        // при этом терялись: POST в новый запрос падал с 403 (§9).
+        $this->container->resetProtected();
+
         // Текущий запрос доступен сервисам через контейнер (Session/Cookie/View).
         $this->container->instance(RequestInterface::class, $request);
 
@@ -352,13 +358,25 @@ final class Kernel implements KernelInterface
         // ядро само выпускает Set-Cookie (HttpOnly+SameSite=Lax; Secure — на https).
         // Иначе CSRF-токен, записанный в сессию при рендере, терялся бы на каждом
         // запросе, и любое POST-действие падало бы с 403.
-        // Проверка hasIncomingId() обязательна: повторная выдача Set-Cookie после
-        // regenerate() перезаписала бы новый сид старым (гонка куков).
-        // Разрешение берётся напрямую из factory (protect): container->get()
-        // создал бы новую сессию со свежим сидом, и выданный SID не совпал бы
-        // с тем, в котором реально лежит CSRF-токен.
+        // Условие startedWithoutCookie(): SID выпускается ТОЛЬКО когда экземпляр
+        // создан без валидной куки клиента — именно тогда токен формы лёг в новую
+        // сессию и без Set-Cookie осиротеет. Раньше условие звучало как
+        // «в ответе нет Set-Cookie SID», и при валидной куке ядро заново
+        // выпускало её же (шум + лишняя запись). Ответ с собственным
+        // Set-Cookie SID (regenerate() в login/rotate потоках) содержит
+        // hasCookie()==true — повторная выдача «старого» сида перезаписала бы
+        // новый (гонка куков), поэтому такой случай отсекаем первым.
+        // Разрешение берётся из реестра protect()-резолвов: container->get()
+        // после сброса создал бы новую сессию со свежим сидом, и выданный SID
+        // не совпал бы с тем, в котором реально лежит CSRF-токен. Fallback-контур
+        // guard'а unknown-host резолвит SessionInterface через контейнер ЯДРА
+        // (SuperAdminGuardMiddleware::csrfToken), поэтому protectedInstance()
+        // всегда видит ровно тот экземпляр, в котором записан токен формы (§9).
         $session = $this->resolveBootSession();
-        if ($session instanceof NativeSession && !$session->hasIncomingId()) {
+        if ($session instanceof NativeSession
+            && $session->startedWithoutCookie()
+            && !$response->hasCookie($session->getCookieName())
+        ) {
             $secure = str_starts_with((string) $this->container->get(SiteContextInterface::class)->getBaseUrl(), 'https://');
             $parts = [
                 $session->getCookieName() . '=' . $session->id(),

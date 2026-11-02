@@ -122,7 +122,18 @@ final class AdminModule implements ModuleInterface
         // Системный middleware: закрывает ВСЁ пространство /system/* и legacy
         // /admin/* за исключением маршрутов входа. Регистрируется раньше
         // маршрутов — панель физически недоступна без сессии супер-админа.
-        $kernel->addSystemMiddleware(new SuperAdminGuardMiddleware($auth, self::PREFIXES));
+        // liveAuthResolver: guard должен отличать «живой POST /login обработает
+        // маршрут модуля» от «модуль не поднялся (unknown-host) — отвечать мне».
+        // Ленивый has() (не get()): не создаёт экземпляр раньше времени (§4).
+        $kernel->addSystemMiddleware(new SuperAdminGuardMiddleware(
+            $auth,
+            self::PREFIXES,
+            static fn (): bool => $container->has(SuperAdminAuthenticatorInterface::class),
+            // containerResolver: fallback-форме входа (unknown-host) нужен тот же
+            // пер-запросовый NativeSession, что резолвит ядро для Set-Cookie SID —
+            // иначе CSRF-токен формы осиротеет и любой POST упадёт с 403 (§9).
+            static fn () => $container,
+        ));
 
         $render = static function (string $template, array $data) use ($view, $stats, $security, $container): Response {
             $data['stats'] ??= null;
@@ -154,17 +165,21 @@ final class AdminModule implements ModuleInterface
 
         // --- Публичные маршруты входа (исключения guard-middleware) -----------
         $loginRender = static function (array $data) use ($view, $security): Response {
+            // Токен ВСЕГДА берётся из сессии текущего запроса через SecurityInterface
+            // (§9). Если SID у клиента ещё нет, токен ляжет в новую сессию, а ядро в
+            // конце run() выпустит Set-Cookie SID ровно для того экземпляра, который
+            // создал Security (protect-синглтон + resolveBootSession) — POST придёт
+            // в ту же сессию и токен сойдётся. Никакого «re-render в Kernel» для
+            // этого не требуется: схема была излишней и ломала первую форму входа.
             $data['csrf'] ??= $security->csrfToken();
             $data['action'] ??= self::SYSTEM_PATH . '/login';
             return Response::html($view->render('admin/login', $data));
         };
 
         foreach (self::PREFIXES as $prefix) {
-            $router->get($prefix . '/login', function (RequestInterface $request) use ($auth, $loginRender): Response {
-                if ($auth !== null && $auth->isConfigured()) {
-                    return $loginRender(['mode' => 'form']);
-                }
-                return $loginRender(['mode' => 'setup']);
+            $router->get($prefix . '/login', function (RequestInterface $request) use ($auth, $loginRender, $prefix): Response {
+                $mode = ($auth !== null && $auth->isConfigured()) ? 'form' : 'setup';
+                return $loginRender(['mode' => $mode, 'action' => $prefix . '/login']);
             });
 
             $router->post($prefix . '/login', function (RequestInterface $request) use ($auth, $security, $loginRender): Response {

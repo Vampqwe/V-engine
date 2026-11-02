@@ -22,6 +22,14 @@ interface SessionStoreInterface
 
     public function destroy(string $id): void;
 
+    /**
+     * Есть ли запись для id. Дефолт — read() !== null: честная проверка для
+     * всех хранилищ; FileSessionStore переопределяет её на exists() (без
+     * unserialize). Используется ядром, чтобы не выпускать Set-Cookie SID
+     * для «виртуальной» сессии, данных которой в хранилище нет (§9).
+     */
+    public function exists(string $id): bool;
+
     /** Жив ли бэкенд прямо сейчас (для HealthCheck и деградации). */
     public function isHealthy(): bool;
 }

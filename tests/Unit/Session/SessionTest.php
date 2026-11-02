@@ -181,6 +181,11 @@ final class InMemoryStore implements SessionStoreInterface
         unset($this->rows[$id]);
     }
 
+    public function exists(string $id): bool
+    {
+        return isset($this->rows[$id]);
+    }
+
     public function isHealthy(): bool
     {
         return $this->healthy;

@@ -55,6 +55,18 @@ final class MigratingSessionStore implements SessionStoreInterface
         $this->legacy->destroy($id);
     }
 
+    /**
+     * Существование сессии в любом из бэкендов (первичный или legacy).
+     * Согласовано с read(): если данные читаются — сессия «есть».
+     */
+    public function exists(string $id): bool
+    {
+        if ($this->primary->isHealthy() && $this->primary->exists($id)) {
+            return true;
+        }
+        return $this->legacy->exists($id);
+    }
+
     public function isHealthy(): bool
     {
         return $this->primary->isHealthy() || $this->legacy->isHealthy();

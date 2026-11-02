@@ -316,6 +316,13 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             'locked' => '<p style="color:#f85149;font-size:13px;margin:0 0 14px">Слишком много попыток. Подождите и повторите.</p>',
             default => '',
         };
+        // CSRF (§9): форма приёма логина защищена токеном движка. Токен
+        // выпускается через SecurityInterface::csrfToken() — сессионный слой
+        // помечает экземпляр как «без куки», и ядро выпустит Set-Cookie SID
+        // (NativeSession::takeOrphanSession), иначе токен осиротеет → 403.
+        // При недоступности секретов (CORE_SECRET/APP_SECRET корень §31)
+        // страница остаётся без токена: приём логина тогда честно отклоняется.
+        $csrf = $this->csrfToken();
         $body = '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<title>401 · LEX SuperAdmin</title></head>'
@@ -327,6 +334,7 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             . '<p style="color:#848d97;font-size:12px;margin:0 0 16px">Системный доступ · вне сайтов и БД</p>'
             . ($error !== '' ? $error : '')
             . ($hint !== '' ? '<div style="margin-bottom:14px">' . $hint . '</div>' : '')
+            . ($csrf !== null ? '<input type="hidden" name="_token" value="' . htmlspecialchars($csrf, ENT_QUOTES) . '">' : '')
             . '<label style="display:block;font-size:12px;color:#848d97;margin-bottom:4px">Логин</label>'
             . '<input type="text" name="login" autocomplete="username" required style="width:100%;padding:8px 10px;margin-bottom:12px;background:#010409;color:#e6edf3;border:1px solid #30363d;border-radius:6px">'
             . '<label style="display:block;font-size:12px;color:#848d97;margin-bottom:4px">Пароль</label>'

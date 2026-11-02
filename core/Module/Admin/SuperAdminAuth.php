@@ -190,7 +190,10 @@ final class SuperAdminAuth implements SuperAdminAuthenticatorInterface
     /** @return array{login:string,hash:string}|null */
     private function loadKeyFile(): ?array
     {
-        $raw = @file_get_contents(self::keyFilePath());
+        // Чтение — строго из instance-$systemDir (юнит-изоляция, §8.4): боевой код
+        // получает SuperAdminAuth::systemDir() в конструкторе (см. AdminModule::boot),
+        // поэтому путь движка здесь уже учтён; глобальный fallback ломал бы изоляцию.
+        $raw = @file_get_contents(rtrim($this->systemDir, '/\\') . '/admin.key');
         if (!is_string($raw)) {
             return null;
         }

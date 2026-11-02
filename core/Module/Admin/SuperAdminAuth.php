@@ -212,7 +212,9 @@ final class SuperAdminAuth implements SuperAdminAuthenticatorInterface
         if (!is_dir($dir)) {
             @mkdir($dir, 0750, true);
         }
-        return $dir . '/' . substr(hash_sha256($ip !== '' ? $ip : 'unknown'), 0, 32) . '.json';
+        // hash('sha256', ...) вместо hash_sha256(): совместимо с PHP-сборками без
+        // шорткат-функций (портативность §31 — тот же приём, что в Security).
+        return $dir . '/' . substr(hash('sha256', $ip !== '' ? $ip : 'unknown'), 0, 32) . '.json';
     }
 
     /** @return array{fails:int[]}|null */

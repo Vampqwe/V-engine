@@ -126,7 +126,7 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
         }
         $base = htmlspecialchars($this->prefixOf('/' . ltrim($request->getPath(), '/')), ENT_QUOTES);
         $rows = [
-            'Engine' => Kernel::VERSION,
+            'Engine' => \Core\Kernel::VERSION,
             'PHP' => PHP_VERSION,
             'Sites' => implode(', ', $sites) ?: '-',
             'Session' => 'HMAC-cookie · file-key (Argon2id) · без БД',
@@ -134,7 +134,7 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
         $html = '<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8">'
             . '<meta name="viewport" content="width=device-width, initial-scale=1">'
             . '<title>LEX SuperAdmin · system</title></head>'
-            . '<body style="background:#0d1117;color:#e6edf3;font-family:-apple-system,'Segoe UI',sans-serif;padding:40px">'
+            . '<body style="background:#0d1117;color:#e6edf3;font-family:-apple-system,' . "\\'" . 'Segoe UI' . "\\'" . ',sans-serif;padding:40px">'
             . '<h1 style="font-size:18px">LEX Engine · панель супер-администратора</h1>'
             . '<p style="color:#848d97;font-size:12px">Режим «система» (хост без привязки к сайту): '
             . 'доступны только сведения инсталляции. Полный контур панели — на сайте с config/.</p>'

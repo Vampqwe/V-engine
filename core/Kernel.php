@@ -368,20 +368,11 @@ final class Kernel implements KernelInterface
         // новый (гонка куков), поэтому такой случай отсекаем первым.
         // Разрешение берётся из реестра protect()-резолвов: container->get()
         // после сброса создал бы новую сессию со свежим сидом, и выданный SID
-        // не совпал бы с тем, в котором реально лежит CSRF-токен. Если же
-        // сессия в этом запросе вообще не резолвилась через контейнер, а
-        // обработчик всё равно выпустил CSRF-токен (fallback-контур guard'а
-        // unknown-host строит Security напрямую), токен осиротел бы без
-        // Set-Cookie — для этого у NativeSession есть статический маркер
-        // lastCreatedWithoutCookie(): он обновляется в конструкторе каждого
-        // нового экземпляра и обнуляется при выдаче куки (single-use).
+        // не совпал бы с тем, в котором реально лежит CSRF-токен. Fallback-контур
+        // guard'а unknown-host резолвит SessionInterface через контейнер ЯДРА
+        // (SuperAdminGuardMiddleware::csrfToken), поэтому protectedInstance()
+        // всегда видит ровно тот экземпляр, в котором записан токен формы (§9).
         $session = $this->resolveBootSession();
-        if ($session === null) {
-            $orphan = NativeSession::takeOrphanSession();
-            if ($orphan instanceof NativeSession) {
-                $session = $orphan;
-            }
-        }
         if ($session instanceof NativeSession
             && $session->startedWithoutCookie()
             && !$response->hasCookie($session->getCookieName())

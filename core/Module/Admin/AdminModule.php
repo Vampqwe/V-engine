@@ -129,6 +129,10 @@ final class AdminModule implements ModuleInterface
             $auth,
             self::PREFIXES,
             static fn (): bool => $container->has(SuperAdminAuthenticatorInterface::class),
+            // containerResolver: fallback-форме входа (unknown-host) нужен тот же
+            // пер-запросовый NativeSession, что резолвит ядро для Set-Cookie SID —
+            // иначе CSRF-токен формы осиротеет и любой POST упадёт с 403 (§9).
+            static fn () => $container,
         ));
 
         $render = static function (string $template, array $data) use ($view, $stats, $security, $container): Response {

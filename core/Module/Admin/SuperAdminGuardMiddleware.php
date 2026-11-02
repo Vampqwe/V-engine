@@ -31,10 +31,14 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
      *        контейнера: guard-привод unknown-host отличает «модуль поднялся и
      *        сам обработает POST /login» от «хендлера нет — отвечать здесь».
      */
+    /** @var self|null Экземпляр guard-привода, обслуживающий текущий запрос (для резолва CSRF из контейнера). */
+    private static ?self $serving = null;
+
     public function __construct(
         private readonly ?SuperAdminAuthenticatorInterface $auth,
         private readonly array $prefixes = [AdminModule::SYSTEM_PATH, AdminModule::PATH],
         private readonly mixed $liveAuthResolver = null,
+        private readonly mixed $containerResolver = null,
     ) {
     }
 
@@ -55,6 +59,16 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
     }
 
     public function handle(RequestInterface $request, callable $next): object
+    {
+        self::$serving = $this; // guard обслуживает запрос: loginPage() резолвит CSRF из его контейнера
+        try {
+            return $this->handleInner($request, $next);
+        } finally {
+            self::$serving = null;
+        }
+    }
+
+    private function handleInner(RequestInterface $request, callable $next): object
     {
         $path = '/' . ltrim($request->getPath(), '/');
         if (!$this->isSystemPath($path)) {
@@ -283,6 +297,49 @@ final class SuperAdminGuardMiddleware implements MiddlewareInterface
             }
         }
         return null;
+    }
+
+    /**
+     * CSRF-токен для fallback-формы входа (режим unknown-host, когда живой
+     * маршрут AdminModule не зарегистрирован). Строится напрямую через
+     * SessionInterface + SecurityInterface контейнера — тот же сессионный
+     * экземпляр, что резолвит ядро в Kernel::run() для Set-Cookie SID (§9).
+     * Контейнер берётся из resolver'а, переданного при регистрации guard'а
+     * (AdminModule::boot); без него (чистый unit-тест) возвращает null:
+     * форма остаётся без токена, а приём логина честно отклоняется.
+     */
+    private function csrfToken(): ?string
+    {
+        try {
+            $container = is_callable($this->containerResolver)
+                ? ($this->containerResolver)()
+                : self::$serving?->containerResolver();
+            if (!is_object($container)
+                || !method_exists($container, 'has')
+                || !method_exists($container, 'get')) {
+                return null;
+            }
+            if (!$container->has(\Core\Contract\SessionInterface::class)
+                || !$container->has(\Core\Contract\SecurityInterface::class)) {
+                return null;
+            }
+            // Сессия резолвится ПЕРВОЙ и кешируется protect()-фабрикой:
+            // Security получит exactly тот же NativeSession-экземпляр, чей SID
+            // потом выпустит ядро (Set-Cookie), иначе токен осиротеет (§9).
+            $container->get(\Core\Contract\SessionInterface::class);
+            $security = $container->get(\Core\Contract\SecurityInterface::class);
+            return $security instanceof \Core\Contract\SecurityInterface
+                ? $security->csrfToken()
+                : null;
+        } catch (\Throwable) {
+            return null; // диагностика формы не должна ронять guard (§31)
+        }
+    }
+
+    /** Резолв контейнера текущего guard-экземпляра (для static loginPage-контекста). */
+    private function containerResolver(): mixed
+    {
+        return $this->containerResolver;
     }
 
     /**

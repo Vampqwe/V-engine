@@ -42,6 +42,12 @@ final class NativeSession implements SessionInterface
         $this->sid = $this->incomingValid ? $incomingId : bin2hex(random_bytes(16));
     }
 
+    /** Есть ли уже запись сессии в хранилище для текущего SID. */
+    public function existsInStore(): bool
+    {
+        return $this->store->exists($this->sid);
+    }
+
     /** Установить имя cookie сессии (вызывается SessionModule при создании). */
     public function setCookieName(string $name): void
     {

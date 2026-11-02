@@ -429,8 +429,10 @@ final class AdminModule implements ModuleInterface
     }
 
     /** Эталонная версия набора шаблонов панели (смена => переустановка копий).
-     *  1.0.1: в набор добавлен login.phtml (страница входа панели). */
-    private const TEMPLATE_VERSION = '1.0.1';
+     *  1.0.1: в набор добавлен login.phtml (страница входа панели).
+     *  1.0.2: helpers.php — все функции обёрнуты в function_exists() (идемпотентный
+     *         include: layout + страница тянут хелперы дважды, без фатального redeclare). */
+    private const TEMPLATE_VERSION = '1.0.2';
 
     /** @var string[] имена шаблонов панели (публикуются в storage/views/admin/) */
     private const TEMPLATE_NAMES = ['helpers', 'layout', 'login', 'dashboard', 'modules', 'health', 'routes', 'storage', 'php'];

@@ -10,7 +10,7 @@
     <span><?php if (!empty($st['root_writable'])): ?><span class="badge ok">запись разрешена</span><?php else: ?><span class="badge fail">недоступен для записи!</span><?php endif; ?></span></div></div>
   <div class="card"><div class="card-b stat"><span class="lbl">Диск</span>
     <span class="num"><?= $esc(number_format($diskPct, 1, ',', ' ')) ?>%</span>
-    <div class="bar"><span class="<?= $esc(lex_adm_bar_class($diskPct)) ?>" style="width:<?= $esc(lex_adm_pct($diskPct)) ?>%"></span></div>
+    <div class="bar"><span class="<?= $esc(lex_adm_bar_class($diskPct)) ?>" style="width:<?= $esc(lex_adm_int($diskPct)) ?>%"></span></div>
     <span class="sub">свободно: <?= $esc(lex_adm_bytes($st['disk_free'] ?? false)) ?> из <?= $esc(lex_adm_bytes($st['disk_total'] ?? false)) ?></span></div></div>
   <div class="card"><div class="card-b stat"><span class="lbl">Сессии / Кэш / Очередь</span>
     <span class="num"><?= $esc(lex_adm_int($st['dirs']['sessions']['files'] ?? 0)) ?> · <?= $esc(lex_adm_int($st['dirs']['cache']['files'] ?? 0)) ?> · <?= $esc(lex_adm_int($st['dirs']['queue']['files'] ?? 0)) ?></span>
